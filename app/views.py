@@ -1,14 +1,18 @@
 from django.shortcuts import render, redirect
-from django.db.models import Count, Subquery, OuterRef
+from django.db.models import Count, Subquery, OuterRef, Q
 from rest_framework.decorators import api_view, parser_classes
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
 from rest_framework import status
 
+from django.conf import settings
 from django.utils import timezone
+from .auth import validate_telegram_init_data
+from .utils import haversine_m, GEO_RADIUS_M, natija_javoblardan
 from .models import (
     Murojaat, MurojaatRasm, Statistika, Maktab, Vaada, Tekshiruv,
     Like, Comment, MaktabIzoh,
+    Dastur, Sorovnoma, Savol, Topshiriq, Javob,
     VILOYATLAR, INFRATUZILMA_TURLARI, OBYEKT_TURLARI,
 )
 
@@ -92,7 +96,30 @@ def statistika_api(request):
 @parser_classes([MultiPartParser, FormParser])
 def murojaat_yuborish(request):
     data = request.data
-    telegram_user_id = data.get('telegram_user_id')
+
+    # Telegram initData HMAC validatsiya
+    init_data_raw = data.get('init_data', '')
+    user_info = validate_telegram_init_data(init_data_raw)
+
+    if user_info is None and not settings.DEBUG:
+        return Response(
+            {'error': 'Telegram autentifikatsiya muvaffaqiyatsiz. Iltimos, qayta urinib ko\'ring.'},
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+
+    # Foydalanuvchi ma'lumotlarini initData dan olamiz (agar mavjud bo'lsa)
+    if user_info:
+        telegram_user_id = str(user_info.get('id', data.get('telegram_user_id', '')))
+        telegram_username = user_info.get('username', data.get('telegram_username', ''))
+        first = user_info.get('first_name', '')
+        last = user_info.get('last_name', '')
+        telegram_full_name = f"{first} {last}".strip() or data.get('telegram_full_name', '')
+    else:
+        # DEBUG fallback
+        telegram_user_id = data.get('telegram_user_id', '')
+        telegram_username = data.get('telegram_username', '')
+        telegram_full_name = data.get('telegram_full_name', '')
+
     if not telegram_user_id:
         return Response({'error': 'telegram_user_id majburiy'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -101,8 +128,6 @@ def murojaat_yuborish(request):
     infratuzilma = data.get('infratuzilma', '').strip()
     sektor = data.get('sektor', '').strip()
 
-    # Barcha maydonlar ixtiyoriy — faqat telegram_user_id majburiy
-
     murojaat = Murojaat.objects.create(
         viloyat=viloyat,
         tuman=tuman,
@@ -110,8 +135,8 @@ def murojaat_yuborish(request):
         sektor=sektor,
         izoh=data.get('izoh', ''),
         telegram_user_id=int(telegram_user_id),
-        telegram_username=data.get('telegram_username', ''),
-        telegram_full_name=data.get('telegram_full_name', ''),
+        telegram_username=telegram_username,
+        telegram_full_name=telegram_full_name,
         is_anonim=data.get('is_anonim', 'false') == 'true',
     )
     # Ko'p rasm saqlash
@@ -164,12 +189,17 @@ def maktablar_royxati(request):
     viloyat_filter = request.query_params.get('viloyat')
     tuman_filter = request.query_params.get('tuman')
     tur_filter = request.query_params.get('tur')
+    q = request.query_params.get('q', '').strip()
     if viloyat_filter:
         maktablar = maktablar.filter(viloyat=viloyat_filter)
     if tuman_filter:
         maktablar = maktablar.filter(tuman=tuman_filter)
     if tur_filter:
         maktablar = maktablar.filter(tur=tur_filter)
+    if q:
+        maktablar = maktablar.filter(
+            Q(nom__icontains=q) | Q(tuman__icontains=q) | Q(manzil__icontains=q)
+        )
     data = []
     for m in maktablar:
         jami = Tekshiruv.objects.filter(maktab=m).count()
@@ -189,6 +219,8 @@ def maktablar_royxati(request):
             holat = 'nosoz'
             holat_rangi = '#ef4444'
 
+        xarita_rangi = m.xarita_rangi()
+        rang_hex = {'yashil': '#22c55e', 'sariq': '#f59e0b', 'qizil': '#ef4444', 'kulrang': '#94a3b8'}.get(xarita_rangi, '#94a3b8')
         data.append({
             'id': m.id,
             'nom': m.nom,
@@ -206,6 +238,11 @@ def maktablar_royxati(request):
             'mamnuniyat_foizi': foiz,
             'holat': holat,
             'holat_rangi': holat_rangi,
+            'xarita_rangi': xarita_rangi,
+            'xarita_rangi_hex': rang_hex,
+            'ishonch_darajasi': m.ishonch_darajasi(),
+            'nomuvofiqlik': m.nomuvofiqlik_bayrogi(),
+            'eskirgan': m.eskirgan(),
             'vaadalar_soni': m.vaadalar.count(),
         })
 
@@ -290,9 +327,43 @@ def maktab_detail_api(request, maktab_id):
 def tekshiruv_yuborish(request):
     """Fuqaro maktabdagi va'dani tekshiradi"""
     data = request.data
-    telegram_user_id = data.get('telegram_user_id')
+
+    # Telegram initData HMAC validatsiya
+    init_data_raw = data.get('init_data', '')
+    user_info = validate_telegram_init_data(init_data_raw)
+
+    if user_info is None and not settings.DEBUG:
+        return Response(
+            {'error': 'Telegram autentifikatsiya muvaffaqiyatsiz. Iltimos, qayta urinib ko\'ring.'},
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+
+    # Foydalanuvchi ma'lumotlarini initData dan olamiz
+    if user_info:
+        telegram_user_id = str(user_info.get('id', data.get('telegram_user_id', '')))
+        telegram_username = user_info.get('username', data.get('telegram_username', ''))
+        first = user_info.get('first_name', '')
+        last = user_info.get('last_name', '')
+        telegram_full_name = f"{first} {last}".strip() or data.get('telegram_full_name', '')
+    else:
+        telegram_user_id = data.get('telegram_user_id', '')
+        telegram_username = data.get('telegram_username', '')
+        telegram_full_name = data.get('telegram_full_name', '')
+
     maktab_id = data.get('maktab_id')
     natija = data.get('natija')
+    javoblar_raw = data.get('javoblar')  # JSON string (sorovnoma oqimi)
+
+    # Sorovnoma oqimida natija majburiy emas — javoblardan hisoblanadi
+    if javoblar_raw:
+        import json
+        try:
+            javoblar_list = json.loads(javoblar_raw) if isinstance(javoblar_raw, str) else javoblar_raw
+        except (json.JSONDecodeError, TypeError):
+            javoblar_list = []
+        natija = natija or natija_javoblardan(javoblar_list)
+    else:
+        javoblar_list = []
 
     if not all([telegram_user_id, maktab_id, natija]):
         return Response({'error': 'telegram_user_id, maktab_id, natija majburiy'}, status=status.HTTP_400_BAD_REQUEST)
@@ -305,6 +376,30 @@ def tekshiruv_yuborish(request):
     except Maktab.DoesNotExist:
         return Response({'error': 'Maktab topilmadi'}, status=status.HTTP_404_NOT_FOUND)
 
+    # Geovalidatsiya — TZ: obyektdan 200m radius (majburiy)
+    user_lat = data.get('lat')
+    user_lng = data.get('lng')
+    geo_valid = False
+
+    if user_lat and user_lng:
+        try:
+            masofa = haversine_m(float(user_lat), float(user_lng), maktab.lat, maktab.lng)
+            geo_valid = masofa <= GEO_RADIUS_M
+        except (ValueError, TypeError):
+            geo_valid = False
+
+        if not geo_valid and not settings.DEBUG:
+            return Response({
+                'error': f'Siz maktabdan uzoqdasiz. Tekshiruv faqat {GEO_RADIUS_M}m yaqindan qabul qilinadi.',
+                'geo_error': True,
+            }, status=status.HTTP_400_BAD_REQUEST)
+    elif not settings.DEBUG:
+        # Production da GPS majburiy
+        return Response({
+            'error': 'Geolokatsiya ma\'lumoti majburiy. GPS ni yoqing.',
+            'geo_error': True,
+        }, status=status.HTTP_400_BAD_REQUEST)
+
     vaada = None
     vaada_id = data.get('vaada_id')
     if vaada_id:
@@ -313,16 +408,36 @@ def tekshiruv_yuborish(request):
         except Vaada.DoesNotExist:
             pass
 
+    rasm_file = request.FILES.get('rasm')
+    video_file = request.FILES.get('video')
     tekshiruv = Tekshiruv.objects.create(
         maktab=maktab,
         vaada=vaada,
         natija=natija,
-        rasm=data.get('rasm'),
+        rasm=rasm_file,
+        video=video_file,
         izoh=data.get('izoh', ''),
         telegram_user_id=int(telegram_user_id),
-        telegram_username=data.get('telegram_username', ''),
-        telegram_full_name=data.get('telegram_full_name', ''),
+        telegram_username=telegram_username,
+        telegram_full_name=telegram_full_name,
+        lat=float(user_lat) if user_lat else None,
+        lng=float(user_lng) if user_lng else None,
+        geo_valid=geo_valid,
     )
+
+    # ── Sorovnoma javoblarini saqlash ──
+    for j in javoblar_list:
+        savol_id = j.get('savol_id')
+        qiymat = j.get('qiymat')
+        if savol_id is not None and qiymat is not None:
+            try:
+                javob = Javob(tekshiruv=tekshiruv, savol_id=int(savol_id), qiymat=qiymat)
+                foto_key = f'javob_foto_{savol_id}'
+                if foto_key in request.FILES:
+                    javob.foto = request.FILES[foto_key]
+                javob.save()
+            except Exception:
+                pass
 
     # ── Lentaga avtomatik post qo'shish ──
     vaada_nom = vaada.nom if vaada else ''
@@ -343,14 +458,14 @@ def tekshiruv_yuborish(request):
         sektor='',
         izoh=lenta_izoh,
         telegram_user_id=int(telegram_user_id),
-        telegram_username=data.get('telegram_username', ''),
-        telegram_full_name=data.get('telegram_full_name', ''),
+        telegram_username=telegram_username,
+        telegram_full_name=telegram_full_name,
         holat=lenta_holat,
     )
-    # Rasmni Lenta postiga ham qo'shish
-    rasm_file = data.get('rasm')
+    # Rasmni Lenta postiga ham qo'shish (rasm_file allaqachon request.FILES dan olindi)
     if rasm_file:
         try:
+            rasm_file.seek(0)
             MurojaatRasm.objects.create(murojaat=lenta_post, rasm=rasm_file)
         except Exception:
             pass
@@ -612,6 +727,94 @@ def tumanlari_api(request):
             'vaadalar_soni': vaadalar_soni,
         })
     return Response(result)
+
+
+# ─── So'rovnoma API ──────────────────────────────────────────────────────────
+
+@api_view(['GET'])
+def obyekt_sorovnoma(request, maktab_id):
+    """Maktabga biriktirilgan aktiv so'rovnomani qaytaradi"""
+    try:
+        maktab = Maktab.objects.get(id=maktab_id)
+    except Maktab.DoesNotExist:
+        return Response({'error': 'Topilmadi'}, status=status.HTTP_404_NOT_FOUND)
+
+    topshiriq = (
+        Topshiriq.objects
+        .filter(maktab=maktab, sorovnoma__nashr_holati='nashr')
+        .select_related('sorovnoma__dastur')
+        .first()
+    )
+    if not topshiriq:
+        return Response({'sorovnoma': None})
+
+    sorovnoma = topshiriq.sorovnoma
+    savollar = [
+        {
+            'id': s.id,
+            'tur': s.tur,
+            'matn': s.matn,
+            'variantlar': s.variantlar,
+            'majburiy': s.majburiy,
+            'foto_biriktirish': s.foto_biriktirish,
+            'tartib': s.tartib,
+        }
+        for s in sorovnoma.savollar.all()
+    ]
+    return Response({
+        'sorovnoma': {
+            'id': sorovnoma.id,
+            'dastur_nom': sorovnoma.dastur.nom,
+            'tavsif': sorovnoma.tavsif,
+            'ortacha_vaqt_min': sorovnoma.ortacha_vaqt_min,
+            'savollar': savollar,
+        }
+    })
+
+
+@api_view(['GET'])
+def sorovnoma_preview(request, sorovnoma_id):
+    """Admin uchun so'rovnoma preview"""
+    try:
+        sorovnoma = Sorovnoma.objects.select_related('dastur').get(id=sorovnoma_id)
+    except Sorovnoma.DoesNotExist:
+        return Response({'error': 'Topilmadi'}, status=status.HTTP_404_NOT_FOUND)
+
+    savollar = [
+        {
+            'id': s.id,
+            'tur': s.tur,
+            'matn': s.matn,
+            'variantlar': s.variantlar,
+            'majburiy': s.majburiy,
+            'foto_biriktirish': s.foto_biriktirish,
+            'tartib': s.tartib,
+        }
+        for s in sorovnoma.savollar.all()
+    ]
+    return Response({
+        'id': sorovnoma.id,
+        'dastur_nom': sorovnoma.dastur.nom,
+        'tavsif': sorovnoma.tavsif,
+        'nashr_holati': sorovnoma.nashr_holati,
+        'ortacha_vaqt_min': sorovnoma.ortacha_vaqt_min,
+        'savollar': savollar,
+    })
+
+
+@api_view(['GET'])
+def savol_turlari(request):
+    """So'rovnoma savol turlari meta"""
+    return Response({
+        'turlari': [
+            {'kod': 'ha_yoq', 'nom': "Ha/Yo'q", 'tavsif': "Ikkita tugma: Ha yoki Yo'q"},
+            {'kod': 'shkala_1_5', 'nom': 'Shkala 1-5', 'tavsif': '5 ta raqam/yulduz'},
+            {'kod': 'variant', 'nom': 'Variant tanlash', 'tavsif': "Ko'p variantli tanlov"},
+            {'kod': 'son', 'nom': 'Son kiritish', 'tavsif': 'Raqamli javob'},
+            {'kod': 'foto', 'nom': 'Foto', 'tavsif': 'Kamera orqali rasm yuklash'},
+            {'kod': 'matn', 'nom': 'Matn', 'tavsif': "Erkin matn (500 belgi)"},
+        ]
+    })
 
 
 # ─── Nisbiy vaqt helper ──────────────────────────────────────────────────────

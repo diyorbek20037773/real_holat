@@ -34,4 +34,9 @@ urlpatterns = [
 
     # ── Profil API ─────────────────────────────────────────────
     path('api/profil/', views.profil_api, name='api_profil'),
+
+    # ── So'rovnoma API ─────────────────────────────────────────
+    path('api/obyekt/<int:maktab_id>/sorovnoma/', views.obyekt_sorovnoma, name='api_obyekt_sorovnoma'),
+    path('api/sorovnoma/<int:sorovnoma_id>/preview/', views.sorovnoma_preview, name='api_sorovnoma_preview'),
+    path('api/savol-turlari/', views.savol_turlari, name='api_savol_turlari'),
 ]

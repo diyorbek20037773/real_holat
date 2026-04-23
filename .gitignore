@@ -66,3 +66,15 @@ static_root/
 # Node
 node_modules/
 map_frontend/dist/
+admin_panel/dist/
+admin_panel/node_modules/
+
+# Claude internal
+.claude/
+
+# Temp Word files
+~$*
+
+# Photos / misc binaries
+photo_*.jpg
+*.docx

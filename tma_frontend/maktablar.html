@@ -13,6 +13,7 @@
       theme: { extend: { colors: { primary: "#9d2bee" }, fontFamily: { display: ["Inter","sans-serif"] } } }
     }
   </script>
+  <script src="/static/i18n/i18n.js"></script>
   <style>
     body {
       font-family: 'Inter', sans-serif;
@@ -55,12 +56,19 @@
       </button>
     </div>
     <!-- Qidiruv -->
-    <div id="qidiruvBox" class="hidden mt-2">
+    <div id="qidiruvBox" class="hidden mt-2 relative">
       <div class="glass rounded-full flex items-center px-4 gap-2 h-10">
         <span class="material-symbols-outlined text-slate-400" style="font-size:16px">search</span>
         <input id="qidiruvInput" type="text" placeholder="Nomi bo'yicha qidiring..."
-          oninput="filterMaktablar()"
+          oninput="debounceQidiruv()"
+          onblur="setTimeout(()=>hideAutocompl(),200)"
           class="flex-1 bg-transparent border-none text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-0"/>
+        <button id="qidiruvTozala" onclick="tozalaQidiruv()" class="hidden text-slate-400 active:text-slate-700 transition-colors">
+          <span class="material-symbols-outlined" style="font-size:16px">close</span>
+        </button>
+      </div>
+      <!-- Autocomplete dropdown -->
+      <div id="autocompleteDrop" class="hidden absolute left-0 right-0 top-12 z-50 glass rounded-2xl shadow-xl overflow-hidden">
       </div>
     </div>
   </div>
@@ -156,6 +164,63 @@
       const box = document.getElementById('qidiruvBox');
       box.classList.toggle('hidden');
       if (!box.classList.contains('hidden')) document.getElementById('qidiruvInput').focus();
+      else { tozalaQidiruv(); }
+    }
+
+    let _debTimer = null;
+    function debounceQidiruv() {
+      clearTimeout(_debTimer);
+      _debTimer = setTimeout(filterMaktablar, 300);
+    }
+
+    function tozalaQidiruv() {
+      document.getElementById('qidiruvInput').value = '';
+      document.getElementById('qidiruvTozala').classList.add('hidden');
+      hideAutocompl();
+      qidiruvMatn = '';
+      render();
+    }
+
+    function hideAutocompl() {
+      document.getElementById('autocompleteDrop').classList.add('hidden');
+    }
+
+    function showAutocompl(q) {
+      if (!q || q.length < 2) { hideAutocompl(); return; }
+      const top5 = barcha.filter(m =>
+        m.nom.toLowerCase().includes(q) ||
+        (m.tuman && m.tuman.toLowerCase().includes(q)) ||
+        (m.manzil && m.manzil.toLowerCase().includes(q))
+      ).slice(0, 5);
+
+      const drop = document.getElementById('autocompleteDrop');
+      if (!top5.length) { hideAutocompl(); return; }
+
+      const TUR_ICONS_MAP = {maktab:'school', bogcha:'child_care', shifoxona:'local_hospital', sport:'fitness_center'};
+      drop.innerHTML = top5.map((m, i) => `
+        <button class="w-full flex items-center gap-3 px-4 py-3 text-left active:bg-white/60 transition-colors ${i < top5.length-1 ? 'border-b border-white/40' : ''}"
+          onmousedown="selectAutocompl(${m.id}, '${m.nom.replace(/'/g,"\\'")}')">
+          <span class="material-symbols-outlined text-slate-400 flex-shrink-0" style="font-size:16px">${TUR_ICONS_MAP[m.tur]||'school'}</span>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-slate-800 truncate">${highlight(m.nom, q)}</p>
+            <p class="text-xs text-slate-500">${m.viloyat||''}, ${m.tuman||''}</p>
+          </div>
+          <span class="material-symbols-outlined text-slate-300" style="font-size:14px">north_west</span>
+        </button>
+      `).join('');
+      drop.classList.remove('hidden');
+    }
+
+    function highlight(text, q) {
+      const idx = text.toLowerCase().indexOf(q);
+      if (idx === -1) return text;
+      return text.slice(0,idx) + '<mark style="background:#dbeafe;color:#1d4ed8;border-radius:2px">' + text.slice(idx, idx+q.length) + '</mark>' + text.slice(idx+q.length);
+    }
+
+    function selectAutocompl(id, nom) {
+      document.getElementById('qidiruvInput').value = nom;
+      hideAutocompl();
+      window.location.href = `/tma/maktablar/${id}/`;
     }
 
     function setFilter(f) {
@@ -168,7 +233,9 @@
     }
 
     function filterMaktablar() {
-      qidiruvMatn = document.getElementById('qidiruvInput').value.toLowerCase();
+      qidiruvMatn = document.getElementById('qidiruvInput').value.toLowerCase().trim();
+      document.getElementById('qidiruvTozala').classList.toggle('hidden', !qidiruvMatn);
+      showAutocompl(qidiruvMatn);
       render();
     }
 
@@ -187,7 +254,11 @@
         });
       }
       if (qidiruvMatn) {
-        list = list.filter(m => m.nom.toLowerCase().includes(qidiruvMatn) || m.tuman.toLowerCase().includes(qidiruvMatn));
+        list = list.filter(m =>
+          m.nom.toLowerCase().includes(qidiruvMatn) ||
+          (m.tuman && m.tuman.toLowerCase().includes(qidiruvMatn)) ||
+          (m.manzil && m.manzil.toLowerCase().includes(qidiruvMatn))
+        );
       }
       return list;
     }

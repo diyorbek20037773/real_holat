@@ -92,6 +92,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # CORS — TMA frontend dan so'rovlarga ruxsat
 CORS_ALLOW_ALL_ORIGINS = True
 
+# Telegram
+TELEGRAM_BOT_TOKEN = os.getenv('BOT_TOKEN', '')
+
+# Monitoring: N kundan ko'p tekshirilmagan obyekt "eskirgan" hisoblanadi
+MONITORING_ESKIRISH_KUNI = int(os.getenv('MONITORING_ESKIRISH_KUNI', '90'))
+
 # DRF sozlamalari
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': ['rest_framework.renderers.JSONRenderer'],

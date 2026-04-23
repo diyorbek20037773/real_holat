@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL@20..48,100..700,0..1&display=swap" rel="stylesheet"/>
   <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
   <script>tailwind.config={theme:{extend:{colors:{primary:"#9d2bee"},fontFamily:{display:["Inter","sans-serif"]}}}}</script>
+  <script src="/static/i18n/i18n.js"></script>
   <style>
     body{font-family:'Inter',sans-serif;background:linear-gradient(135deg,#dcfce7 0%,#e0f2fe 50%,#f3e8ff 100%);min-height:100vh;color:#0f172a;}
     .gl{background:rgba(255,255,255,0.6);backdrop-filter:blur(20px);border:1px solid rgba(0,0,0,0.06);}
@@ -303,12 +304,12 @@
 <!-- ═══ BOTTOM TABS ═══ -->
 <div class="fixed bottom-0 left-0 right-0 z-50" style="background:rgba(255,255,255,0.92);backdrop-filter:blur(16px);border-top:1px solid rgba(0,0,0,0.06);">
   <div class="flex items-end justify-around py-1.5 px-4">
-    <a href="/tma/feed/" class="btab"><span class="material-symbols-outlined text-slate-400" style="font-size:22px;font-variation-settings:'FILL' 1">dynamic_feed</span><span class="text-[9px] font-semibold text-slate-400">Lenta</span></a>
+    <a href="/tma/feed/" class="btab"><span class="material-symbols-outlined text-slate-400" style="font-size:22px;font-variation-settings:'FILL' 1">dynamic_feed</span><span class="text-[9px] font-semibold text-slate-400" data-i18n="nav.lenta">Lenta</span></a>
     <a href="/tma/murojaat/" class="flex flex-col items-center">
       <div class="signal-fab-sm"><span class="material-symbols-outlined text-white" style="font-size:24px;font-variation-settings:'FILL' 1">campaign</span></div>
-      <span class="text-[9px] font-bold mt-0.5" style="color:#9d2bee">Signal</span>
+      <span class="text-[9px] font-bold mt-0.5" style="color:#9d2bee" data-i18n="nav.signal">Signal</span>
     </a>
-    <a href="/tma/tahlil/" class="btab"><span class="material-symbols-outlined text-slate-400" style="font-size:22px;font-variation-settings:'FILL' 1">bar_chart</span><span class="text-[9px] font-semibold text-slate-400">Tahlil</span></a>
+    <a href="/tma/tahlil/" class="btab"><span class="material-symbols-outlined text-slate-400" style="font-size:22px;font-variation-settings:'FILL' 1">bar_chart</span><span class="text-[9px] font-semibold text-slate-400" data-i18n="nav.tahlil">Tahlil</span></a>
   </div>
 </div>
 
@@ -363,6 +364,18 @@ function addFiles(files){
   Array.from(files).forEach(f=>{
     if(mediaFiles.length>=5)return;
     if(mediaFiles.find(m=>m.name===f.name&&m.size===f.size))return;
+    if(f.size>20*1024*1024){tg.showAlert('Fayl hajmi 20MB dan oshmasligi kerak: '+f.name);return;}
+    if(f.type.startsWith('video/')){
+      const url=URL.createObjectURL(f);
+      const tmp=document.createElement('video');
+      tmp.preload='metadata'; tmp.src=url;
+      tmp.onloadedmetadata=()=>{
+        URL.revokeObjectURL(url);
+        if(tmp.duration>60){tg.showAlert('Video 60 soniyadan qisqa bo\'lishi kerak');return;}
+        mediaFiles.push(f); renderMedia(); calcReach();
+      };
+      return;
+    }
     mediaFiles.push(f);
   });
   renderMedia(); calcReach();
@@ -447,6 +460,8 @@ async function submit(){
   fd.append('sektor','');
   fd.append('is_anonim',isAnonim?'true':'false');
   fd.append('izoh',izoh);
+  fd.append('init_data', tg.initData || '');
+  // Fallback debug uchun
   fd.append('telegram_user_id',user.id||'0');
   fd.append('telegram_username',user.username||'');
   fd.append('telegram_full_name',`${user.first_name||''} ${user.last_name||''}`.trim());
@@ -603,9 +618,13 @@ async function tksSubmit(){
   fd.append('maktab_id',tksSelectedObj.id);
   fd.append('natija',tksSelectedNatija);
   fd.append('izoh',document.getElementById('tksIzoh').value||'');
+  fd.append('init_data', tg.initData || '');
+  // Fallback debug uchun
   fd.append('telegram_user_id',user.id||'0');
   fd.append('telegram_username',user.username||'');
   fd.append('telegram_full_name',`${user.first_name||''} ${user.last_name||''}`.trim());
+  // tksCoords — tekshir oqimida GPS allaqachon olindi
+  if(tksCoords){fd.append('lat',tksCoords.lat);fd.append('lng',tksCoords.lng);}
   if(tksFile)fd.append('rasm',tksFile);
   try{
     const res=await fetch('/api/tekshiruv/',{method:'POST',body:fd});

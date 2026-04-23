@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@400,0&display=swap" rel="stylesheet"/>
   <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
   <script>tailwind.config={theme:{extend:{colors:{primary:"#9d2bee"},fontFamily:{display:["Inter","sans-serif"]}}}}</script>
+  <script src="/static/i18n/i18n.js"></script>
   <style>
     body{font-family:'Inter',sans-serif;background:linear-gradient(135deg,#dcfce7 0%,#e0f2fe 50%,#f3e8ff 100%);min-height:100vh;color:#0f172a;}
     .glass{background:rgba(255,255,255,0.55);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.7);}
@@ -101,7 +102,7 @@
     <div class="glass rounded-2xl p-4 shadow-sm fade-up" style="animation-delay:0.2s">
       <h3 class="text-sm font-black text-slate-800 mb-3 flex items-center gap-2">
         <span class="material-symbols-outlined text-yellow-500" style="font-size:18px">emoji_events</span>
-        Yutuqlar
+        <span data-i18n="profil.yutuqlar">Yutuqlar</span>
       </h3>
       <div id="badgesList" class="grid grid-cols-2 gap-2">
         <!-- Badges rendered by JS -->
@@ -112,25 +113,38 @@
     <div class="glass rounded-2xl p-4 shadow-sm fade-up" style="animation-delay:0.3s">
       <h3 class="text-sm font-black text-slate-800 mb-3 flex items-center gap-2">
         <span class="material-symbols-outlined text-primary" style="font-size:18px">history</span>
-        Oxirgi faoliyatlar
+        <span data-i18n="profil.faoliyat">Oxirgi faoliyatlar</span>
       </h3>
       <div id="faoliyatList" class="space-y-2">
         <!-- Activities rendered by JS -->
       </div>
       <div id="faoliyatEmpty" class="hidden py-6 text-center">
         <span class="material-symbols-outlined text-slate-300" style="font-size:40px">inbox</span>
-        <p class="text-xs text-slate-400 mt-2">Hali faoliyat yo'q</p>
+        <p class="text-xs text-slate-400 mt-2" data-i18n="profil.hali_yoq">Hali faoliyat yo'q</p>
+      </div>
+    </div>
+
+    <!-- ── Til tanlash ── -->
+    <div class="glass rounded-2xl p-4 fade-up" style="animation-delay:0.35s">
+      <h3 class="text-sm font-black text-slate-800 mb-3 flex items-center gap-2">
+        <span class="material-symbols-outlined text-blue-500" style="font-size:18px">translate</span>
+        <span data-i18n="profil.til_sarlavha">Til / Язык / Тил</span>
+      </h3>
+      <div class="flex gap-2">
+        <button data-lang-btn="uz_lat" onclick="setLang('uz_lat')" class="flex-1 py-2 rounded-xl text-sm transition-all active:scale-95">O'z (lotin)</button>
+        <button data-lang-btn="uz_cyr" onclick="setLang('uz_cyr')" class="flex-1 py-2 rounded-xl text-sm transition-all active:scale-95">Ўз (кирил)</button>
+        <button data-lang-btn="ru"     onclick="setLang('ru')"     class="flex-1 py-2 rounded-xl text-sm transition-all active:scale-95">Рус</button>
       </div>
     </div>
 
     <!-- ── CTA ── -->
     <div class="glass rounded-2xl p-4 text-center fade-up" style="animation-delay:0.4s">
-      <p class="text-sm text-slate-600 mb-3">Ko'proq ball to'plang va yangi yutuqlarga erishing!</p>
+      <p class="text-sm text-slate-600 mb-3" data-i18n="profil.ball_toplang">Ko'proq ball to'plang va yangi yutuqlarga erishing!</p>
       <div class="flex gap-2">
-        <a href="/tma/xarita/" class="flex-1 py-2.5 rounded-full text-sm font-bold text-white bg-green-500 active:scale-95 transition-all text-center">
+        <a href="/tma/xarita/" class="flex-1 py-2.5 rounded-full text-sm font-bold text-white bg-green-500 active:scale-95 transition-all text-center" data-i18n="profil.tekshirish">
           Tekshirish
         </a>
-        <a href="/tma/murojaat/" class="flex-1 py-2.5 rounded-full text-sm font-bold text-white bg-primary active:scale-95 transition-all text-center">
+        <a href="/tma/murojaat/" class="flex-1 py-2.5 rounded-full text-sm font-bold text-white bg-primary active:scale-95 transition-all text-center" data-i18n="nav.signal">
           Signal
         </a>
       </div>
@@ -141,9 +155,9 @@
   <!-- ═══ Bottom tabs ═══ -->
   <div class="fixed bottom-0 left-0 right-0 z-50" style="background:rgba(255,255,255,0.92);backdrop-filter:blur(16px);border-top:1px solid rgba(0,0,0,0.06);">
     <div class="flex items-end justify-around py-1.5 px-4">
-      <a href="/tma/feed/" class="flex flex-col items-center gap-0.5 px-3 py-1"><span class="material-symbols-outlined text-slate-400" style="font-size:22px;font-variation-settings:'FILL' 1">dynamic_feed</span><span class="text-[9px] font-semibold text-slate-400">Lenta</span></a>
-      <a href="/tma/murojaat/" class="flex flex-col items-center"><div class="signal-fab"><span class="material-symbols-outlined text-white" style="font-size:24px;font-variation-settings:'FILL' 1">campaign</span></div><span class="text-[9px] font-bold mt-0.5" style="color:#9d2bee">Signal</span></a>
-      <a href="/tma/tahlil/" class="flex flex-col items-center gap-0.5 px-3 py-1"><span class="material-symbols-outlined text-slate-400" style="font-size:22px;font-variation-settings:'FILL' 1">bar_chart</span><span class="text-[9px] font-semibold text-slate-400">Tahlil</span></a>
+      <a href="/tma/feed/" class="flex flex-col items-center gap-0.5 px-3 py-1"><span class="material-symbols-outlined text-slate-400" style="font-size:22px;font-variation-settings:'FILL' 1">dynamic_feed</span><span class="text-[9px] font-semibold text-slate-400" data-i18n="nav.lenta">Lenta</span></a>
+      <a href="/tma/murojaat/" class="flex flex-col items-center"><div class="signal-fab"><span class="material-symbols-outlined text-white" style="font-size:24px;font-variation-settings:'FILL' 1">campaign</span></div><span class="text-[9px] font-bold mt-0.5" style="color:#9d2bee" data-i18n="nav.signal">Signal</span></a>
+      <a href="/tma/tahlil/" class="flex flex-col items-center gap-0.5 px-3 py-1"><span class="material-symbols-outlined text-slate-400" style="font-size:22px;font-variation-settings:'FILL' 1">bar_chart</span><span class="text-[9px] font-semibold text-slate-400" data-i18n="nav.tahlil">Tahlil</span></a>
     </div>
   </div>
 

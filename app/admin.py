@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Murojaat, Statistika
+from .models import Murojaat, Statistika, Dastur, Tadbir, Sorovnoma, Savol, Topshiriq, Javob
 
 
 @admin.register(Murojaat)
@@ -15,3 +15,40 @@ class MurojaatAdmin(admin.ModelAdmin):
 @admin.register(Statistika)
 class StatistikaAdmin(admin.ModelAdmin):
     list_display = ('id', 'maktablar_soni', 'bogchalar_soni', 'tibbiyot_soni', 'sport_soni', 'yangilangan_vaqt')
+
+
+class TadbirInline(admin.TabularInline):
+    model = Tadbir
+    extra = 1
+
+
+class SavelInline(admin.TabularInline):
+    model = Savol
+    extra = 1
+
+
+@admin.register(Dastur)
+class DasturAdmin(admin.ModelAdmin):
+    list_display = ('id', 'nom', 'yaratilgan_vaqt')
+    search_fields = ('nom',)
+    inlines = [TadbirInline]
+
+
+@admin.register(Sorovnoma)
+class SorovnomaAdmin(admin.ModelAdmin):
+    list_display = ('id', 'dastur', 'nashr_holati', 'ortacha_vaqt_min')
+    list_filter = ('nashr_holati',)
+    list_editable = ('nashr_holati',)
+    inlines = [SavelInline]
+
+
+@admin.register(Topshiriq)
+class TopshiriqAdmin(admin.ModelAdmin):
+    list_display = ('id', 'maktab', 'sorovnoma')
+    search_fields = ('maktab__nom', 'sorovnoma__dastur__nom')
+
+
+@admin.register(Javob)
+class JavobAdmin(admin.ModelAdmin):
+    list_display = ('id', 'tekshiruv', 'savol', 'qiymat')
+    readonly_fields = ('tekshiruv', 'savol', 'qiymat', 'foto')

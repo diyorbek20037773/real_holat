@@ -11,6 +11,7 @@
   <script>tailwind.config={theme:{extend:{colors:{primary:"#9d2bee"},fontFamily:{display:["Inter","sans-serif"]}}}}</script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/static/i18n/i18n.js"></script>
   <style>
     body{font-family:'Inter',sans-serif;background:#0f172a;min-height:100vh;margin:0;overflow:hidden;}
     ::-webkit-scrollbar{display:none;}
@@ -43,8 +44,8 @@
     .mk-num{
       width:34px;height:34px;border-radius:12px;
       display:flex;align-items:center;justify-content:center;
-      background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;
-      box-shadow:0 3px 12px rgba(59,130,246,0.4),0 0 0 2px rgba(255,255,255,0.25);
+      background:var(--mk-bg,linear-gradient(135deg,#3b82f6,#6366f1));color:#fff;
+      box-shadow:0 3px 12px rgba(0,0,0,0.25),0 0 0 2px rgba(255,255,255,0.25);
       transition:transform 0.2s,box-shadow 0.2s;cursor:pointer;
       font-family:'Inter',sans-serif;font-weight:800;font-size:13px;
       position:relative;
@@ -52,9 +53,13 @@
     .mk-num::after{
       content:'';position:absolute;bottom:-5px;left:50%;transform:translateX(-50%);
       width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;
-      border-top:5px solid #6366f1;
+      border-top-style:solid;border-top-width:5px;border-top-color:var(--mk-clr,#6366f1);
     }
-    .mk-num:hover{transform:scale(1.15);box-shadow:0 5px 20px rgba(59,130,246,0.5),0 0 0 3px rgba(255,255,255,0.35);}
+    .mk-num:hover{transform:scale(1.15);box-shadow:0 5px 20px rgba(0,0,0,0.3),0 0 0 3px rgba(255,255,255,0.35);}
+    /* Rang legendasi (kulrang=tekshirilmagan, yashil=yaxshi, sariq=qisman, qizil=muammo) */
+    .mk-legend{display:flex;gap:8px;flex-wrap:wrap;}
+    .mk-legend-item{display:flex;align-items:center;gap:4px;font-size:10px;color:#64748b;}
+    .mk-legend-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0;}
 
     /* Marker appear animation — smooth pop-in with bounce */
     @keyframes popIn{
@@ -160,7 +165,7 @@
 
 <!-- Loading -->
 <div id="mapLoading" class="ov" style="inset:0;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,0.9);pointer-events:auto">
-  <div style="text-align:center"><div class="spinner" style="margin:0 auto 8px"></div><p style="font-size:11px;color:#64748b">Xarita yuklanmoqda...</p></div>
+  <div style="text-align:center"><div class="spinner" style="margin:0 auto 8px"></div><p style="font-size:11px;color:#64748b" data-i18n="index.yuklanmoqda">Xarita yuklanmoqda...</p></div>
 </div>
 
 <!-- ═══ HEADER — kompakt, tepaga yopishgan ═══ -->
@@ -252,17 +257,17 @@
     <div class="flex items-end justify-around py-1.5 px-4">
       <a href="/tma/feed/" class="flex flex-col items-center gap-0 px-3 py-0.5">
         <span class="material-symbols-outlined text-slate-500" style="font-size:22px;font-variation-settings:'FILL' 1">dynamic_feed</span>
-        <span class="text-[9px] font-semibold text-slate-500">Lenta</span>
+        <span class="text-[9px] font-semibold text-slate-500" data-i18n="nav.lenta">Lenta</span>
       </a>
       <a href="/tma/murojaat/" class="flex flex-col items-center gap-0">
         <div class="signal-fab">
           <span class="material-symbols-outlined text-white" style="font-size:24px;font-variation-settings:'FILL' 1">campaign</span>
         </div>
-        <span class="text-[9px] font-bold mt-0.5" style="color:#9d2bee">Signal</span>
+        <span class="text-[9px] font-bold mt-0.5" style="color:#9d2bee" data-i18n="nav.signal">Signal</span>
       </a>
       <a href="/tma/tahlil/" class="flex flex-col items-center gap-0 px-3 py-0.5">
         <span class="material-symbols-outlined text-slate-500" style="font-size:22px;font-variation-settings:'FILL' 1">bar_chart</span>
-        <span class="text-[9px] font-semibold text-slate-500">Tahlil</span>
+        <span class="text-[9px] font-semibold text-slate-500" data-i18n="nav.tahlil">Tahlil</span>
       </a>
     </div>
   </div>
@@ -326,6 +331,8 @@
         allData = (d.maktablar||[]).map(m=>({
           viloyat:m.viloyat, tuman:m.tuman, obekt_nomi:m.nom,
           id:m.id, lat:m.lat, lng:m.lng,
+          xarita_rangi:m.xarita_rangi||'kulrang', xarita_rangi_hex:m.xarita_rangi_hex||'#94a3b8',
+          ishonch_darajasi:m.ishonch_darajasi||0, nomuvofiqlik:m.nomuvofiqlik||false,
           mamnuniyat_foizi:m.mamnuniyat_foizi, jami_tekshiruv:m.jami_tekshiruv,
           vaadalar_soni:m.vaadalar_soni, holat:m.holat, _local:true
         }));
@@ -505,6 +512,8 @@
     }
 
     let maktablar=allData.filter(m=>m.viloyat===vilNom&&m.tuman===tumNom);
+    // Ishonch past obyektlar birinchi (TZ: ustunlik ishonch past ob'ektlarga)
+    maktablar.sort((a,b)=>(a.ishonch_darajasi??100)-(b.ishonch_darajasi??100));
 
     // Sintetik maktablar — hudud ichida polygon bo'yicha joylashtiriladi
     const target=tumF?targetCount(tumF):10;
@@ -547,10 +556,13 @@
       const num=i+1;
       const nom=m.obekt_nomi||m.nom||'Maktab';
 
-      // Raqamli marker
+      // Rangli marker (xarita_rangi bo'yicha)
+      const rang=m.xarita_rangi||'kulrang';
+      const RANG_COLORS={yashil:['#22c55e','#16a34a'],sariq:['#f59e0b','#d97706'],qizil:['#ef4444','#dc2626'],kulrang:['#94a3b8','#64748b']};
+      const [c1,c2]=(RANG_COLORS[rang]||RANG_COLORS.kulrang);
       const icon=L.divIcon({
         className:'',
-        html:`<div class="mk-num mk-drop" style="animation-delay:${300 + i*80}ms">${num}</div>`,
+        html:`<div class="mk-num mk-drop" style="--mk-bg:linear-gradient(135deg,${c1},${c2});--mk-clr:${c2};animation-delay:${300+i*80}ms">${num}</div>`,
         iconSize:[34,39],
         iconAnchor:[17,39],
       });

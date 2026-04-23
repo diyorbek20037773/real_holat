@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@400,0&display=swap" rel="stylesheet"/>
   <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
   <script>tailwind.config={theme:{extend:{colors:{primary:"#9d2bee"},fontFamily:{display:["Inter","sans-serif"]}}}}</script>
+  <script src="/static/i18n/i18n.js"></script>
   <style>
     body{font-family:'Inter',sans-serif;background:linear-gradient(135deg,#dcfce7 0%,#e0f2fe 50%,#f3e8ff 100%);min-height:100vh;color:#0f172a;}
     .glass{background:rgba(255,255,255,0.55);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.7);}
@@ -104,7 +105,7 @@
   <!-- Izohlar bo'limi -->
   <div class="px-3 mt-4 mb-28">
     <div class="flex items-center justify-between mb-2">
-      <h2 class="text-xs font-black text-slate-500 uppercase tracking-widest">Izohlar</h2>
+      <h2 class="text-xs font-black text-slate-500 uppercase tracking-widest" data-i18n="maktab.izohlar">Izohlar</h2>
       <span id="izohlarSoni" class="text-xs text-slate-400"></span>
     </div>
 
@@ -139,11 +140,11 @@
         <span class="material-symbols-outlined" style="font-size:16px;color:#f59e0b">star</span>
         <span id="ballSoni" class="text-sm font-black text-slate-800">0</span>
       </div>
-      <button id="tekshirBtn" onclick="modalOch(null)"
+      <button id="tekshirBtn" onclick="sorovnomaYokiVaadaModalOch()"
         class="flex-1 py-4 rounded-full font-black text-base flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-lg"
         style="background:#9d2bee;color:white;box-shadow:0 0 20px rgba(157,43,238,0.35)">
         <span class="material-symbols-outlined" style="font-size:20px">fact_check</span>
-        Tekshirish
+        <span data-i18n="maktab.tekshirish_btn">Tekshirish boshlash</span>
       </button>
     </div>
   </div>
@@ -193,21 +194,37 @@
         </button>
       </div>
 
-      <!-- Rasm yuklash (ixtiyoriy) -->
-      <p class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Rasm (ixtiyoriy)</p>
-      <div class="glass-sm rounded-2xl relative mb-4" style="border:1.5px dashed rgba(0,0,0,0.12);">
-        <input type="file" id="modalRasm" accept="image/*" capture="environment"
-          class="absolute inset-0 opacity-0 cursor-pointer z-10 w-full h-full"/>
-        <div id="modalRasmPlaceholder" class="flex items-center gap-3 p-3.5 pointer-events-none">
-          <div class="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <span class="material-symbols-outlined text-primary" style="font-size:18px">add_a_photo</span>
+      <!-- Media: rasm + video -->
+      <p class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Media (ixtiyoriy)</p>
+      <div class="flex gap-2 mb-4">
+        <!-- Rasm -->
+        <div class="flex-1 glass-sm rounded-2xl relative overflow-hidden" style="border:1.5px dashed rgba(0,0,0,0.12);min-height:80px">
+          <input type="file" id="modalRasm" accept="image/*" capture="environment"
+            class="absolute inset-0 opacity-0 cursor-pointer z-10 w-full h-full"/>
+          <div id="modalRasmPlaceholder" class="flex flex-col items-center justify-center gap-1 p-3 h-full pointer-events-none">
+            <div class="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
+              <span class="material-symbols-outlined text-primary" style="font-size:16px">add_a_photo</span>
+            </div>
+            <p class="text-xs text-slate-500 text-center">Rasm<br><span class="text-slate-400">10MB</span></p>
           </div>
-          <div>
-            <p class="text-sm font-semibold text-slate-700">Rasm olish yoki yuklash</p>
-            <p class="text-xs text-slate-400">JPEG, PNG (maks. 10MB)</p>
-          </div>
+          <img id="modalPreview" class="hidden w-full rounded-2xl object-cover" style="max-height:120px"/>
         </div>
-        <img id="modalPreview" class="hidden w-full rounded-2xl object-cover" style="max-height:150px"/>
+        <!-- Video -->
+        <div class="flex-1 glass-sm rounded-2xl relative overflow-hidden" style="border:1.5px dashed rgba(0,0,0,0.12);min-height:80px">
+          <input type="file" id="modalVideo" accept="video/*"
+            class="absolute inset-0 opacity-0 cursor-pointer z-10 w-full h-full"
+            onchange="modalVideoTanlandi(this)"/>
+          <div id="modalVideoPlaceholder" class="flex flex-col items-center justify-center gap-1 p-3 h-full pointer-events-none">
+            <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:rgba(239,68,68,0.1)">
+              <span class="material-symbols-outlined" style="font-size:16px;color:#ef4444">videocam</span>
+            </div>
+            <p class="text-xs text-slate-500 text-center">Video<br><span class="text-slate-400">60s / 20MB</span></p>
+          </div>
+          <video id="modalVideoPreview" class="hidden w-full rounded-2xl" style="max-height:120px" playsinline muted controls></video>
+          <button id="modalVideoClear" onclick="modalVideoTozala()" class="hidden absolute top-1 right-1 w-6 h-6 rounded-full flex items-center justify-center z-20" style="background:rgba(0,0,0,0.6)">
+            <span class="material-symbols-outlined text-white" style="font-size:13px">close</span>
+          </button>
+        </div>
       </div>
 
       <!-- Izoh -->
@@ -222,6 +239,43 @@
         style="background:#9d2bee;box-shadow:0 0 15px rgba(157,43,238,0.3)">
         Yuborish
       </button>
+    </div>
+  </div>
+
+  <!-- So'rovnoma Modal (step-by-step) -->
+  <div id="sorovnomaModal" class="hidden fixed inset-0 z-50 flex items-end">
+    <div class="modal-overlay absolute inset-0" onclick="sorovnomaModalYop()"></div>
+    <div class="relative w-full glass slide-up rounded-t-3xl p-5 z-10 max-h-[90vh] overflow-y-auto" style="background:rgba(255,255,255,0.96)">
+      <div class="w-10 h-1 bg-slate-300 rounded-full mx-auto mb-4"></div>
+
+      <!-- Header: nom + progress -->
+      <div class="flex items-center justify-between mb-2">
+        <p class="text-xs font-bold text-slate-500 uppercase tracking-widest truncate" id="sorovnomaNom">So'rovnoma</p>
+        <span id="sorovnomaProgress" class="text-xs font-black flex-shrink-0 ml-2" style="color:#9d2bee">1/1</span>
+      </div>
+      <!-- Progress bar -->
+      <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden mb-4">
+        <div id="sorovnomaProgressBar" class="h-full rounded-full transition-all duration-300" style="width:0%;background:#9d2bee"></div>
+      </div>
+
+      <!-- Savol matni -->
+      <h3 class="text-base font-black text-slate-900 mb-4 leading-snug" id="savolMatn">Savol...</h3>
+
+      <!-- Savol body (dinamik) -->
+      <div id="savolBody" class="mb-6 min-h-[120px]"></div>
+
+      <!-- Navigation -->
+      <div class="flex gap-3">
+        <button id="sorovnomaOrqaBtn" onclick="sorovnomaOrqa()"
+          class="hidden px-5 py-3.5 rounded-full text-sm font-bold text-slate-600 glass-sm active:scale-95 transition-all">
+          <span data-i18n="sorov.orqaga">← Orqaga</span>
+        </button>
+        <button id="sorovnomaKeyingisi" onclick="sorovnomaKeyingisi()"
+          class="flex-1 py-3.5 rounded-full font-black text-sm text-white active:scale-95 transition-all"
+          style="background:#9d2bee;box-shadow:0 0 15px rgba(157,43,238,0.3)">
+          <span id="keyingisiMatn" data-i18n="sorov.keyingisi">Keyingisi →</span>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -240,6 +294,305 @@
     let tanlangan_natija = null;
     let maktabData = null;
 
+    // ── So'rovnoma holati ─────────────────────────────────────
+    let sorovnomaData = null;
+    let sorovnomaJavoblar = {};  // savol_id → qiymat
+    let sorovnomaFotolar = {};   // savol_id → File
+    let sorovnomaIndex = 0;
+
+    async function sorovnomaYukla() {
+      try {
+        const res = await fetch(`/api/obyekt/${maktabId}/sorovnoma/`);
+        const d = await res.json();
+        sorovnomaData = d.sorovnoma;
+      } catch { sorovnomaData = null; }
+    }
+
+    function sorovnomaYokiVaadaModalOch() {
+      if (sorovnomaData && sorovnomaData.savollar && sorovnomaData.savollar.length) {
+        sorovnomaModalOch();
+      } else {
+        modalOch(null);
+      }
+    }
+
+    function sorovnomaModalOch() {
+      sorovnomaJavoblar = {};
+      sorovnomaFotolar = {};
+      sorovnomaIndex = 0;
+      document.getElementById('sorovnomaNom').textContent = sorovnomaData.dastur_nom;
+      sorovnomaSavolKorsat(0);
+      document.getElementById('sorovnomaModal').classList.remove('hidden');
+    }
+
+    function sorovnomaModalYop() {
+      document.getElementById('sorovnomaModal').classList.add('hidden');
+    }
+
+    function sorovnomaSavolKorsat(index) {
+      const savollar = sorovnomaData.savollar;
+      const savol = savollar[index];
+      const jami = savollar.length;
+
+      document.getElementById('sorovnomaProgress').textContent = `${index + 1}/${jami}`;
+      document.getElementById('sorovnomaProgressBar').style.width = `${((index + 1) / jami) * 100}%`;
+      document.getElementById('savolMatn').textContent = savol.matn;
+
+      const orqaBtn = document.getElementById('sorovnomaOrqaBtn');
+      orqaBtn.classList.toggle('hidden', index === 0);
+
+      const keyBtn = document.getElementById('sorovnomaKeyingisi');
+      keyBtn.textContent = index === jami - 1 ? 'Yuborish ✓' : 'Keyingisi →';
+
+      const body = document.getElementById('savolBody');
+      body.innerHTML = renderSavolTuri(savol, sorovnomaJavoblar[savol.id]);
+
+      // Foto input listener
+      if (savol.tur === 'foto') {
+        const fotoInput = document.getElementById('fotoInput');
+        if (fotoInput) {
+          fotoInput.addEventListener('change', function() {
+            if (!this.files[0]) return;
+            sorovnomaFotolar[savol.id] = this.files[0];
+            sorovnomaJavoblar[savol.id] = this.files[0].name;
+            const reader = new FileReader();
+            reader.onload = e => {
+              const prev = document.getElementById('fotoPreview');
+              if (prev) { prev.src = e.target.result; prev.classList.remove('hidden'); }
+              const ph = document.getElementById('fotoPlaceholder');
+              if (ph) ph.classList.add('hidden');
+            };
+            reader.readAsDataURL(this.files[0]);
+          });
+        }
+      }
+      // Matn counter
+      if (savol.tur === 'matn') {
+        const ta = document.getElementById('matnInput');
+        const counter = document.getElementById('matnCounter');
+        if (ta && counter) {
+          const update = () => { counter.textContent = `${ta.value.length}/500`; };
+          update();
+          ta.addEventListener('input', update);
+        }
+      }
+    }
+
+    function renderSavolTuri(savol, existing) {
+      switch (savol.tur) {
+        case 'ha_yoq': {
+          const haStyle = existing === 'ha'
+            ? 'border-color:#22c55e;background:rgba(34,197,94,0.15)'
+            : 'border-color:transparent';
+          const yoqStyle = existing === 'yoq'
+            ? 'border-color:#ef4444;background:rgba(239,68,68,0.15)'
+            : 'border-color:transparent';
+          return `
+            <div class="grid grid-cols-2 gap-3">
+              <button onclick="sorovnomaJavobTanla(${savol.id},'ha',this)" data-val="ha"
+                class="sorov-btn glass-sm rounded-2xl p-4 flex flex-col items-center gap-2 active:scale-95 transition-all" style="border:2px solid;${haStyle}">
+                <span style="font-size:32px">✅</span>
+                <span class="text-sm font-bold text-slate-700">Ha</span>
+              </button>
+              <button onclick="sorovnomaJavobTanla(${savol.id},'yoq',this)" data-val="yoq"
+                class="sorov-btn glass-sm rounded-2xl p-4 flex flex-col items-center gap-2 active:scale-95 transition-all" style="border:2px solid;${yoqStyle}">
+                <span style="font-size:32px">❌</span>
+                <span class="text-sm font-bold text-slate-700">Yo'q</span>
+              </button>
+            </div>`;
+        }
+        case 'shkala_1_5':
+          return `
+            <div class="flex justify-center gap-3 py-3">
+              ${[1,2,3,4,5].map(n => `
+                <button onclick="sorovnomaJavobTanla(${savol.id},${n},this)" data-val="${n}"
+                  class="sorov-shkala w-13 h-13 rounded-full font-black text-lg flex items-center justify-center transition-all active:scale-90"
+                  style="width:52px;height:52px;background:${existing===n?'#9d2bee':'rgba(0,0,0,0.06)'};color:${existing===n?'white':'#334155'}">
+                  ${n}
+                </button>`).join('')}
+            </div>
+            <p class="text-center text-xs text-slate-400">1 — past &nbsp;·&nbsp; 5 — yuqori</p>`;
+
+        case 'variant': {
+          const variantlar = savol.variantlar || [];
+          const sel = existing || [];
+          return `<div class="space-y-2">${variantlar.map((v, i) => {
+            const isSel = sel.includes(v);
+            return `
+              <button onclick="sorovnomaVariantToggle(${savol.id},'${v.replace(/'/g, "\\'")}',${i})"
+                class="w-full text-left glass-sm rounded-xl px-4 py-3 flex items-center gap-3 transition-all active:scale-[0.98]"
+                style="border:2px solid ${isSel ? '#9d2bee' : 'transparent'}">
+                <div class="w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center"
+                  style="border-color:${isSel ? '#9d2bee' : '#cbd5e1'};background:${isSel ? '#9d2bee' : 'transparent'}">
+                  ${isSel ? '<span style="color:white;font-size:10px;font-weight:900">✓</span>' : ''}
+                </div>
+                <span class="text-sm font-semibold text-slate-700">${v}</span>
+              </button>`;
+          }).join('')}</div>`;
+        }
+        case 'son':
+          return `
+            <div class="glass-sm rounded-2xl p-6 text-center">
+              <input type="number" id="sonInput" value="${existing ?? ''}" placeholder="0"
+                oninput="sorovnomaJavoblar[${savol.id}]=this.value?parseFloat(this.value):null"
+                class="text-3xl font-black text-center text-slate-800 bg-transparent border-none outline-none w-full"
+                style="min-height:56px"/>
+              <p class="text-xs text-slate-400 mt-2">Raqam kiriting</p>
+            </div>`;
+
+        case 'foto':
+          return `
+            <div class="glass-sm rounded-2xl relative overflow-hidden" style="border:1.5px dashed rgba(0,0,0,0.12);min-height:100px">
+              <input type="file" id="fotoInput" accept="image/*" capture="environment"
+                class="absolute inset-0 opacity-0 cursor-pointer z-10 w-full h-full"/>
+              <div id="fotoPlaceholder" class="flex items-center gap-3 p-4 pointer-events-none ${existing ? 'hidden' : ''}">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:rgba(157,43,238,0.1)">
+                  <span class="material-symbols-outlined" style="color:#9d2bee;font-size:20px">add_a_photo</span>
+                </div>
+                <div>
+                  <p class="text-sm font-semibold text-slate-700">Rasm olish yoki yuklash</p>
+                  <p class="text-xs text-slate-400">JPEG, PNG (maks. 10MB)</p>
+                </div>
+              </div>
+              <img id="fotoPreview" class="${existing ? '' : 'hidden'} w-full object-cover rounded-2xl" style="max-height:200px"/>
+            </div>`;
+
+        case 'matn':
+          return `
+            <div>
+              <textarea id="matnInput" rows="4" maxlength="500"
+                placeholder="Fikringizni yozing..."
+                oninput="sorovnomaJavoblar[${savol.id}]=this.value||null"
+                class="w-full px-4 py-3 rounded-2xl text-sm text-slate-700 placeholder-slate-400 resize-none focus:outline-none focus:ring-2"
+                style="background:rgba(0,0,0,0.04);border:1px solid rgba(0,0,0,0.08);focus-ring-color:#9d2bee">${existing || ''}</textarea>
+              <p class="text-right text-xs text-slate-400 mt-1" id="matnCounter">0/500</p>
+            </div>`;
+
+        default:
+          return `<p class="text-slate-400 text-sm text-center py-4">Noma'lum savol turi</p>`;
+      }
+    }
+
+    function sorovnomaJavobTanla(savol_id, qiymat, btn) {
+      sorovnomaJavoblar[savol_id] = qiymat;
+      const body = document.getElementById('savolBody');
+      const isShkala = btn && btn.classList.contains('sorov-shkala');
+      if (isShkala) {
+        body.querySelectorAll('.sorov-shkala').forEach(b => {
+          const v = parseInt(b.dataset.val);
+          b.style.background = v === qiymat ? '#9d2bee' : 'rgba(0,0,0,0.06)';
+          b.style.color = v === qiymat ? 'white' : '#334155';
+        });
+      } else {
+        body.querySelectorAll('.sorov-btn').forEach(b => {
+          const v = b.dataset.val;
+          if (v === qiymat) {
+            b.style.borderColor = v === 'ha' ? '#22c55e' : '#ef4444';
+            b.style.background = v === 'ha' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)';
+          } else {
+            b.style.borderColor = 'transparent';
+            b.style.background = '';
+          }
+        });
+      }
+    }
+
+    function sorovnomaVariantToggle(savol_id, qiymat) {
+      const arr = Array.isArray(sorovnomaJavoblar[savol_id]) ? [...sorovnomaJavoblar[savol_id]] : [];
+      const idx = arr.indexOf(qiymat);
+      if (idx >= 0) arr.splice(idx, 1); else arr.push(qiymat);
+      sorovnomaJavoblar[savol_id] = arr.length ? arr : null;
+      sorovnomaSavolKorsat(sorovnomaIndex);
+    }
+
+    function sorovnomaOrqa() {
+      if (sorovnomaIndex > 0) {
+        sorovnomaIndex--;
+        sorovnomaSavolKorsat(sorovnomaIndex);
+      }
+    }
+
+    async function sorovnomaKeyingisi() {
+      const savollar = sorovnomaData.savollar;
+      const savol = savollar[sorovnomaIndex];
+      const javob = sorovnomaJavoblar[savol.id];
+      if (savol.majburiy && (javob === undefined || javob === null)) {
+        tg.showAlert("Iltimos, javob bering");
+        return;
+      }
+      sorovnomaIndex++;
+      if (sorovnomaIndex >= savollar.length) {
+        await sorovnomaYuborish();
+      } else {
+        sorovnomaSavolKorsat(sorovnomaIndex);
+      }
+    }
+
+    async function sorovnomaYuborish() {
+      const keyBtn = document.getElementById('sorovnomaKeyingisi');
+      keyBtn.disabled = true;
+      keyBtn.textContent = 'GPS aniqlanmoqda...';
+
+      const gps = await getGPSPosition();
+      if (!gps) {
+        tg.showAlert("GPS aniqlanmadi. Geolokatsiyani yoqing va qayta urining.");
+        keyBtn.disabled = false;
+        keyBtn.textContent = 'Yuborish ✓';
+        sorovnomaIndex = sorovnomaData.savollar.length - 1;
+        return;
+      }
+      keyBtn.textContent = 'Yuborilmoqda...';
+
+      const javoblarList = Object.entries(sorovnomaJavoblar)
+        .filter(([, v]) => v !== null && v !== undefined)
+        .map(([k, v]) => ({ savol_id: parseInt(k), qiymat: v }));
+
+      const formData = new FormData();
+      formData.append('maktab_id', maktabId);
+      formData.append('init_data', tg.initData || '');
+      formData.append('lat', gps.lat);
+      formData.append('lng', gps.lng);
+      formData.append('javoblar', JSON.stringify(javoblarList));
+      for (const [sid, file] of Object.entries(sorovnomaFotolar)) {
+        formData.append(`javob_foto_${sid}`, file);
+      }
+      const user = tg.initDataUnsafe?.user || {};
+      formData.append('telegram_user_id', user.id || '0');
+      formData.append('telegram_username', user.username || '');
+      formData.append('telegram_full_name', `${user.first_name||''} ${user.last_name||''}`.trim());
+
+      try {
+        const res = await fetch('/api/tekshiruv/', { method: 'POST', body: formData });
+        const d = await res.json();
+        if (res.ok && d.success) {
+          sorovnomaModalYop();
+          showToast(`✓ Rahmat! So'rovnoma qabul qilindi.`);
+          if (d.yangi_badge) {
+            setTimeout(() => {
+              document.getElementById('badgeIcon').innerHTML =
+                `<span class="material-symbols-outlined" style="font-size:32px;color:${d.yangi_badge.rang}">${d.yangi_badge.icon}</span>`;
+              document.getElementById('badgeIcon').style.background = d.yangi_badge.rang + '15';
+              document.getElementById('badgeNom').textContent = d.yangi_badge.nom;
+              document.getElementById('badgeDesc').textContent = d.yangi_badge.tavsif;
+              document.getElementById('badgePopup').classList.remove('hidden');
+            }, 1200);
+          }
+          setTimeout(() => yukla(), 800);
+        } else if (d.geo_error) {
+          tg.showAlert('📍 ' + d.error);
+          sorovnomaIndex = sorovnomaData.savollar.length - 1;
+        } else {
+          throw new Error(d.error || 'Xatolik');
+        }
+      } catch(e) {
+        tg.showAlert('Xatolik: ' + e.message);
+        sorovnomaIndex = sorovnomaData.savollar.length - 1;
+      } finally {
+        keyBtn.disabled = false;
+        keyBtn.textContent = 'Yuborish ✓';
+      }
+    }
+
     // Rasm preview
     document.getElementById('modalRasm').addEventListener('change', function() {
       if (!this.files[0]) return;
@@ -252,6 +605,44 @@
       };
       reader.readAsDataURL(this.files[0]);
     });
+
+    // Video preview + validatsiya (60s, 20MB)
+    function modalVideoTanlandi(input) {
+      const file = input.files[0];
+      if (!file) return;
+      if (file.size > 20 * 1024 * 1024) {
+        tg.showAlert('Video hajmi 20MB dan oshmasligi kerak');
+        input.value = '';
+        return;
+      }
+      const url = URL.createObjectURL(file);
+      const tmpVid = document.createElement('video');
+      tmpVid.preload = 'metadata';
+      tmpVid.src = url;
+      tmpVid.onloadedmetadata = () => {
+        URL.revokeObjectURL(url);
+        if (tmpVid.duration > 60) {
+          tg.showAlert('Video davomiyligi 60 soniyadan oshmasligi kerak');
+          input.value = '';
+          return;
+        }
+        const preview = document.getElementById('modalVideoPreview');
+        preview.src = URL.createObjectURL(file);
+        preview.classList.remove('hidden');
+        document.getElementById('modalVideoPlaceholder').classList.add('hidden');
+        document.getElementById('modalVideoClear').classList.remove('hidden');
+      };
+    }
+
+    function modalVideoTozala() {
+      const input = document.getElementById('modalVideo');
+      const preview = document.getElementById('modalVideoPreview');
+      input.value = '';
+      preview.src = '';
+      preview.classList.add('hidden');
+      document.getElementById('modalVideoPlaceholder').classList.remove('hidden');
+      document.getElementById('modalVideoClear').classList.add('hidden');
+    }
 
     function natijaTanla(natija) {
       tanlangan_natija = natija;
@@ -269,6 +660,7 @@
       document.getElementById('modalRasm').value = '';
       document.getElementById('modalPreview').classList.add('hidden');
       document.getElementById('modalRasmPlaceholder').classList.remove('hidden');
+      modalVideoTozala();
 
       if (vaadaId && maktabData) {
         const vaada = maktabData.vaadalar.find(v => v.id === vaadaId);
@@ -285,6 +677,17 @@
       document.getElementById('modal').classList.add('hidden');
     }
 
+    function getGPSPosition() {
+      return new Promise((resolve) => {
+        if (!navigator.geolocation) { resolve(null); return; }
+        navigator.geolocation.getCurrentPosition(
+          pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+          () => resolve(null),
+          { timeout: 8000, maximumAge: 30000, enableHighAccuracy: true }
+        );
+      });
+    }
+
     async function tekshiruvYuborish() {
       if (!tanlangan_natija) {
         tg.showAlert("Iltimos, natijani tanlang: Bajarildi yoki Muammo");
@@ -292,26 +695,42 @@
       }
       const btn = document.getElementById('modalSubmit');
       btn.disabled = true;
+      btn.textContent = 'GPS aniqlanmoqda...';
+
+      // GPS olish — backend 200m geovalidatsiya uchun majburiy
+      const gps = await getGPSPosition();
+      if (!gps) {
+        tg.showAlert("GPS aniqlanmadi. Geolokatsiyani yoqing va qayta urining.\n\nEslatma: Tekshiruv faqat maktab yaqinidan yuborilishi mumkin.");
+        btn.disabled = false;
+        btn.textContent = 'Yuborish';
+        return;
+      }
+
       btn.textContent = 'Yuborilmoqda...';
 
-      const user = tg.initDataUnsafe?.user || {};
       const formData = new FormData();
       formData.append('maktab_id', maktabId);
       formData.append('natija', tanlangan_natija);
       formData.append('izoh', document.getElementById('modalIzoh').value);
+      formData.append('init_data', tg.initData || '');
+      formData.append('lat', gps.lat);
+      formData.append('lng', gps.lng);
+      // Fallback — initData bo'sh bo'lsa (debug muhit)
+      const user = tg.initDataUnsafe?.user || {};
       formData.append('telegram_user_id', user.id || '0');
       formData.append('telegram_username', user.username || '');
       formData.append('telegram_full_name', `${user.first_name||''} ${user.last_name||''}`.trim());
       if (aktiv_vaada_id) formData.append('vaada_id', aktiv_vaada_id);
       const rasmFile = document.getElementById('modalRasm').files[0];
       if (rasmFile) formData.append('rasm', rasmFile);
+      const videoFile = document.getElementById('modalVideo').files[0];
+      if (videoFile) formData.append('video', videoFile);
 
       try {
         const res = await fetch('/api/tekshiruv/', { method: 'POST', body: formData });
         const d = await res.json();
         if (res.ok && d.success) {
           modalYop();
-          // Ball va badge ko'rsatish
           if (d.user_ball !== undefined) {
             showToast(`+10 ball! Jami: ${d.user_ball} ball`);
             document.getElementById('ballChip').classList.remove('hidden');
@@ -319,7 +738,6 @@
           } else {
             showToast(`✓ Rahmat! Mamnuniyat: ${d.mamnuniyat_foizi}%`);
           }
-          // Yangi badge popup
           if (d.yangi_badge) {
             setTimeout(() => {
               document.getElementById('badgeIcon').innerHTML =
@@ -331,6 +749,8 @@
             }, 1200);
           }
           setTimeout(() => yukla(), 800);
+        } else if (d.geo_error) {
+          tg.showAlert('📍 ' + d.error);
         } else {
           throw new Error(d.error || 'Xatolik');
         }
@@ -544,6 +964,7 @@
     }
 
     yukla();
+    sorovnomaYukla();
   </script>
 </body>
 </html>
