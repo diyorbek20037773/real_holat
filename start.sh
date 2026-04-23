@@ -12,5 +12,7 @@ echo "=== Static done ==="
 echo "=== Seeding data ==="
 python manage.py seed_data 2>&1
 echo "=== Seed done ==="
+echo "=== Starting bot ==="
+python bot/bot.py &
 echo "=== Starting gunicorn ==="
 exec python -m gunicorn core.wsgi --bind 0.0.0.0:${PORT:-8000} --workers 2
