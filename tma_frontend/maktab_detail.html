@@ -300,20 +300,50 @@
     let sorovnomaFotolar = {};   // savol_id → File
     let sorovnomaIndex = 0;
 
+    // ── Savol pool (24 ta, 3 blok: A-Infratuzilma, B-Sanitariya, V-Gigiyena) ──
+    const SAVOL_POOL = [
+      {id:1, matn:"Hojatxona qayerda joylashgan?", tur:'variant', variantlar:["Bino ichida","Tashqarida"], majburiy:false},
+      {id:2, matn:"Kanalizatsiya turi qanday (ko'rinib turgan belgisi)?", tur:'variant', variantlar:["Septik / Mahalliy tozalash","Usti yopiq axlat o'rasi","Ochiq o'ra"], majburiy:false},
+      {id:3, matn:"Hozirda qo'lyuvgichlarga suv kelib turaptimi?", tur:'ha_yoq', majburiy:false},
+      {id:4, matn:"Hojatxonalar o'g'il bolalar va qizlar uchun alohida ajratilganmi?", tur:'ha_yoq', majburiy:false},
+      {id:5, matn:"Kabinalarning eshiklarida soz holatdagi quflari bormi?", tur:'variant', variantlar:["Ha, barchasida","Qisman","Yo'q"], majburiy:false},
+      {id:6, matn:"Hojatxonadagi chiroqlar ishlayaptimi?", tur:'ha_yoq', majburiy:false},
+      {id:7, matn:"Imkoniyati cheklangan shaxslar uchun alohida kabina bormi?", tur:'ha_yoq', majburiy:false},
+      {id:8, matn:"To'siqsiz kirish imkoniyati bormi (pandus / ostonalar yo'q)?", tur:'ha_yoq', majburiy:false},
+      {id:9, matn:"Dozatorlarda sovun bormi?", tur:'variant', variantlar:["Ha, barchasida","Qisman","Yo'q"], majburiy:false},
+      {id:10, matn:"Kabinalarda hojatxona qog'ozi bormi?", tur:'variant', variantlar:["Ha, barchasida","Qisman","Yo'q"], majburiy:false},
+      {id:11, matn:"Yo'laklardagi antiseptiklar to'ldirilganmi?", tur:'variant', variantlar:["Ha","Qisman","Yo'q"], majburiy:false},
+      {id:12, matn:"Hojatxona qay darajada toza?", tur:'ha_yoq', majburiy:false},
+      {id:13, matn:"O'quvchilar uchun ichimlik suvi bormi (kuler, filtr, qaynатilgan suv)?", tur:'ha_yoq', majburiy:false},
+      {id:14, matn:"Zamin qismida suv oqib ketishi uchun traplar bormi?", tur:'ha_yoq', majburiy:false},
+      {id:15, matn:"Barcha nuqtalarda gidrozatvorlar o'rnatilganmi?", tur:'ha_yoq', majburiy:false},
+      {id:16, matn:"Avtonom suv ta'minoti: bak tozami va qopqog'i yopiqmi?", tur:'variant', variantlar:["Ha","Yo'q","Bak yo'q"], majburiy:false},
+      {id:17, matn:"Bakdagi suvning rangi me'yordami, ainib qolmaganmi?", tur:'variant', variantlar:["Ha","Yo'q","Bak yo'q"], majburiy:false},
+      {id:18, matn:"QR-kodli posterlar belgilangan joylarga osilganmi?", tur:'variant', variantlar:["Ha","Qisman","Yo'q"], majburiy:false},
+      {id:19, matn:"QR-kod ishlayaptimi? (kamera bilan skaner qiling)", tur:'ha_yoq', majburiy:false},
+      {id:20, matn:"2-3 o'quvchidan so'rang: hojatxonadan keyin qo'llarini yuvasanmi?", tur:'variant', variantlar:["Hamma 'ha' dedi","Qisman","Yo'q"], majburiy:false},
+      {id:21, matn:"2-3 o'quvchidan so'rang: 'Toza Qo'llar' dasturini bilasizmi?", tur:'variant', variantlar:["Hamma biladi","Qisman","Bilmaydi"], majburiy:false},
+      {id:22, matn:"Qo'l yuvish uchun yuviniш moslamalari (umyvalniklаr) bormi?", tur:'ha_yoq', majburiy:false},
+      {id:23, matn:"Hozirda yuviniш moslamalarining yonida nimalаr bоr?", tur:'variant', variantlar:["Sovun","Suv","Hech narsa yo'q"], majburiy:false},
+      {id:24, matn:"Hojatxona hozirda o'quvchilar uchun ochiqmi (qulfllanmaganmi)?", tur:'ha_yoq', majburiy:false},
+    ];
+
+    function getRandomSavollar(n) {
+      return [...SAVOL_POOL].sort(() => Math.random() - 0.5).slice(0, n);
+    }
+
     async function sorovnomaYukla() {
-      try {
-        const res = await fetch(`/api/obyekt/${maktabId}/sorovnoma/`);
-        const d = await res.json();
-        sorovnomaData = d.sorovnoma;
-      } catch { sorovnomaData = null; }
+      // Pool questions - no backend fetch needed
+      sorovnomaData = null;
     }
 
     function sorovnomaYokiVaadaModalOch() {
-      if (sorovnomaData && sorovnomaData.savollar && sorovnomaData.savollar.length) {
-        sorovnomaModalOch();
-      } else {
-        modalOch(null);
-      }
+      // Always use random 5 questions from pool
+      sorovnomaData = {
+        dastur_nom: "Tekshiruv so'rovnomasi",
+        savollar: getRandomSavollar(5)
+      };
+      sorovnomaModalOch();
     }
 
     function sorovnomaModalOch() {
