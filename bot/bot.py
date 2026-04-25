@@ -41,7 +41,7 @@ Siz bu yerda:
 
 @dp.message(CommandStart())
 async def start_handler(message: Message):
-    webapp_url = f"{APP_URL}/tma/maktablar/"
+    webapp_url = f"{APP_URL}/tma/murojaat/"
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [
@@ -106,7 +106,7 @@ async def web_app_data_handler(message: Message):
 
 @dp.message()
 async def fallback_handler(message: Message):
-    webapp_url = f"{APP_URL}/tma/maktablar/"
+    webapp_url = f"{APP_URL}/tma/murojaat/"
     keyboard = InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(
             text="📲 Ilovani ochish",
@@ -122,7 +122,7 @@ async def fallback_handler(message: Message):
 
 async def set_menu_button():
     """Chatning pastida doimiy Mini App tugmasini o'rnatish"""
-    webapp_url = f"{APP_URL}/tma/maktablar/"
+    webapp_url = f"{APP_URL}/tma/murojaat/"
     try:
         await bot.set_chat_menu_button(
             menu_button=MenuButtonWebApp(
