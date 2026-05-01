@@ -91,15 +91,19 @@
     .signal-fab{width:48px;height:48px;border-radius:50%;margin-top:-18px;background:linear-gradient(135deg,#9d2bee,#7c3aed);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 18px rgba(157,43,238,0.4);position:relative;}
     .signal-fab::before{content:'';position:absolute;inset:-3px;border-radius:50%;border:1.5px solid rgba(157,43,238,0.3);animation:sigPulse 2s ease-out infinite;}
 
-    /* ── Tekshir FAB ── */
-    @keyframes tekshirPulse{0%,100%{box-shadow:0 0 12px rgba(59,130,246,0.3),0 0 0 0 rgba(99,102,241,0.4);transform:scale(1)}50%{box-shadow:0 0 24px rgba(59,130,246,0.6),0 0 40px rgba(99,102,241,0.2);transform:scale(1.08)}}
-    @keyframes tekshirRing{0%{transform:scale(1);opacity:0.6}100%{transform:scale(1.5);opacity:0}}
+    /* ── Signal central nav button ── */
     @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
     @keyframes spin{to{transform:rotate(360deg)}}
     .spinner{animation:spin 0.7s linear infinite;border:2.5px solid rgba(0,0,0,0.08);border-top-color:#9333ea;border-radius:50%;width:24px;height:24px;}
-    .tekshir-fab{position:fixed;bottom:74px;right:12px;z-index:1199;width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;display:flex;align-items:center;justify-content:center;animation:tekshirPulse 2s ease-in-out infinite;}
-    .tekshir-fab::before{content:'';position:absolute;inset:-4px;border-radius:50%;border:2px solid rgba(59,130,246,0.3);animation:tekshirRing 2s ease-out infinite;}
-    .tekshir-fab:active{transform:scale(0.92);}
+    .signal-fab-lg{
+      width:62px;height:62px;border-radius:50%;margin-top:-24px;
+      background:linear-gradient(135deg,#9d2bee,#7c3aed);
+      display:flex;align-items:center;justify-content:center;
+      box-shadow:0 6px 22px rgba(157,43,238,0.45);position:relative;
+      border:none;cursor:pointer;
+    }
+    .signal-fab-lg::before{content:'';position:absolute;inset:-4px;border-radius:50%;border:1.5px solid rgba(157,43,238,0.3);animation:sigPulse 2s ease-out infinite;}
+    .signal-fab-lg:active{transform:scale(0.94);}
     .tks-bg{position:fixed;inset:0;z-index:1300;background:rgba(0,0,0,0);pointer-events:none;transition:background 0.35s;}
     .tks-bg.open{background:rgba(0,0,0,0.5);pointer-events:auto;}
     .tks-sheet{position:fixed;bottom:0;left:0;right:0;z-index:1301;background:#fff;border-radius:20px 20px 0 0;max-height:88vh;display:flex;flex-direction:column;transform:translateY(100%);transition:transform 0.4s cubic-bezier(0.32,0.72,0,1);box-shadow:0 -4px 30px rgba(0,0,0,0.12);}
@@ -305,13 +309,6 @@
   </div>
 </div>
 
-<!-- Tekshir FAB with label -->
-<div id="tekshirFabWrap" style="position:fixed;bottom:68px;right:12px;z-index:1199;display:flex;flex-direction:column;align-items:center;gap:4px;">
-  <button onclick="openTekshir()" id="tekshirFab" class="tekshir-fab" style="position:relative;bottom:auto;right:auto;">
-    <span class="material-symbols-outlined" style="font-size:24px;font-variation-settings:'FILL' 1">radar</span>
-  </button>
-  <span style="background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;font-size:9px;font-weight:800;padding:3px 8px;border-radius:99px;white-space:nowrap;box-shadow:0 2px 8px rgba(59,130,246,0.3);letter-spacing:0.3px;">Tekshir!</span>
-</div>
 
 <!-- Tekshir Sheet -->
 <div id="tksBg" class="tks-bg" onclick="closeTekshir()"></div>
@@ -406,6 +403,10 @@
 <div class="fixed bottom-0 left-0 right-0 z-[1200]" style="background:rgba(255,255,255,0.92);backdrop-filter:blur(16px);border-top:1px solid rgba(0,0,0,0.06);">
   <div class="flex items-end justify-around py-1.5 px-4">
     <a href="/tma/feed/" class="flex flex-col items-center gap-0.5 px-3 py-1"><span class="material-symbols-outlined text-slate-400" style="font-size:22px;font-variation-settings:'FILL' 1">dynamic_feed</span><span class="text-[9px] font-semibold text-slate-400" data-i18n="nav.lenta">Lenta</span></a>
+    <button type="button" onclick="openTekshir()" class="flex flex-col items-center bg-transparent border-0 p-0">
+      <div class="signal-fab-lg"><span class="material-symbols-outlined text-white" style="font-size:30px;font-variation-settings:'FILL' 1">campaign</span></div>
+      <span class="text-[10px] font-bold mt-0.5" style="color:#9d2bee">Signal</span>
+    </button>
     <a href="/tma/tahlil/" class="flex flex-col items-center gap-0.5 px-3 py-1"><span class="material-symbols-outlined" style="font-size:22px;color:#0f172a;font-variation-settings:'FILL' 1">bar_chart</span><span class="text-[9px] font-bold text-slate-900" data-i18n="nav.tahlil">Tahlil</span></a>
   </div>
 </div>
@@ -683,14 +684,12 @@ function tksHide(id){document.getElementById(id).style.display='none';document.g
 function openTekshir(){
   document.getElementById('tksBg').classList.add('open');
   document.getElementById('tksSheet').classList.add('open');
-  document.getElementById('tekshirFabWrap').style.display='none';
   tksShow('tksStep1'); tksHide('tksStep2'); tksHide('tksSuccess');
 }
 function closeTekshir(){
   document.getElementById('tksSheet').classList.remove('open');
   setTimeout(()=>{
     document.getElementById('tksBg').classList.remove('open');
-    document.getElementById('tekshirFabWrap').style.display='';
     tksSelectedObj=null; tksSelectedNatija=''; tksFile=null;
     tksShow('tksStep1'); tksHide('tksStep2'); tksHide('tksSuccess');
   },400);
