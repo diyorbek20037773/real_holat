@@ -8,12 +8,16 @@ from pathlib import Path
 
 BASE = Path(__file__).resolve().parent.parent
 
+_ALLOWED_GEOJSON = {'uz-tumanlar.geojson', 'uz-viloyatlar.geojson'}
+
 def serve_geojson(request, filename):
-    filepath = BASE / filename
-    if filepath.exists() and filepath.suffix == '.geojson':
-        return FileResponse(open(filepath, 'rb'), content_type='application/json')
     from django.http import Http404
-    raise Http404
+    if filename not in _ALLOWED_GEOJSON:
+        raise Http404
+    filepath = BASE / filename
+    if not filepath.exists():
+        raise Http404
+    return FileResponse(open(filepath, 'rb'), content_type='application/json')
 
 urlpatterns = [
     path('admin/', admin.site.urls),

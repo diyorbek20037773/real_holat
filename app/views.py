@@ -1,20 +1,27 @@
+import logging
+
 from django.shortcuts import render, redirect
 from django.db.models import Count, Subquery, OuterRef, Q, Case, When, IntegerField, Value, Max
-from rest_framework.decorators import api_view, parser_classes
+from rest_framework.decorators import api_view, parser_classes, throttle_classes
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
 from rest_framework import status
+from django.core.exceptions import ValidationError
 
 from django.conf import settings
 from django.utils import timezone
 from .auth import validate_telegram_init_data
 from .utils import haversine_m, GEO_RADIUS_M, natija_javoblardan
+from .throttles import MurojaatThrottle, TekshiruvThrottle, CommentThrottle, LikeThrottle
+from .validators import validate_image, validate_video, validate_text_len
 from .models import (
     Murojaat, MurojaatRasm, Statistika, Maktab, Vaada, Tekshiruv,
     Like, Comment, MaktabIzoh,
     Dastur, Sorovnoma, Savol, Topshiriq, Javob,
     VILOYATLAR, INFRATUZILMA_TURLARI, OBYEKT_TURLARI,
 )
+
+logger = logging.getLogger(__name__)
 
 # Viloyat markazlari koordinatalari
 VILOYAT_COORDS = {
@@ -118,6 +125,7 @@ def statistika_api(request):
 
 @api_view(['POST'])
 @parser_classes([MultiPartParser, FormParser])
+@throttle_classes([MurojaatThrottle])
 def murojaat_yuborish(request):
     data = request.data
 
@@ -151,13 +159,19 @@ def murojaat_yuborish(request):
     tuman = data.get('tuman', '').strip()
     infratuzilma = data.get('infratuzilma', '').strip()
     sektor = data.get('sektor', '').strip()
+    izoh = data.get('izoh', '').strip()
+
+    try:
+        validate_text_len(izoh, 'izoh')
+    except ValidationError as e:
+        return Response({'error': str(e.message)}, status=status.HTTP_400_BAD_REQUEST)
 
     murojaat = Murojaat.objects.create(
         viloyat=viloyat,
         tuman=tuman,
         infratuzilma=infratuzilma,
         sektor=sektor,
-        izoh=data.get('izoh', ''),
+        izoh=izoh,
         telegram_user_id=int(telegram_user_id),
         telegram_username=telegram_username,
         telegram_full_name=telegram_full_name,
@@ -171,9 +185,12 @@ def murojaat_yuborish(request):
             rasmlar = [single]
     for f in rasmlar:
         try:
+            validate_image(f)
             MurojaatRasm.objects.create(murojaat=murojaat, rasm=f)
+        except ValidationError as e:
+            logger.warning(f"murojaat #{murojaat.id}: rasm rad etildi — {e.message}")
         except Exception:
-            pass  # Rasm saqlanmasa ham murojaat qabul qilinadi
+            logger.exception(f"murojaat #{murojaat.id}: rasm saqlashda xato")
 
     from django.core.cache import cache
     cache.delete('statistika_v1')
@@ -392,6 +409,7 @@ def maktab_detail_api(request, maktab_id):
 
 @api_view(['POST'])
 @parser_classes([MultiPartParser, FormParser])
+@throttle_classes([TekshiruvThrottle])
 def tekshiruv_yuborish(request):
     """Fuqaro maktabdagi va'dani tekshiradi"""
     data = request.data
@@ -477,7 +495,19 @@ def tekshiruv_yuborish(request):
             pass
 
     rasm_file = request.FILES.get('rasm')
+    if rasm_file:
+        try:
+            validate_image(rasm_file)
+        except ValidationError as e:
+            return Response({'error': str(e.message)}, status=status.HTTP_400_BAD_REQUEST)
+
     video_file = request.FILES.get('video')
+    if video_file:
+        try:
+            validate_video(video_file)
+        except ValidationError as e:
+            return Response({'error': str(e.message)}, status=status.HTTP_400_BAD_REQUEST)
+
     tekshiruv = Tekshiruv.objects.create(
         maktab=maktab,
         vaada=vaada,
@@ -958,12 +988,11 @@ HOLAT_LABELS = {
 @api_view(['GET'])
 def feed_api(request):
     """Ommaviy feed — barcha murojaatlar, pagination + like/comment soni"""
-    import traceback
     try:
         return _feed_api_inner(request)
-    except Exception as e:
-        traceback.print_exc()
-        return Response({'error': str(e), 'results': [], 'jami': 0, 'has_more': False}, status=200)
+    except Exception:
+        logger.exception("feed_api ichki xato")
+        return Response({'results': [], 'has_more': False}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 def _feed_api_inner(request):
     limit = min(int(request.query_params.get('limit', 10)), 50)
@@ -1056,6 +1085,7 @@ def _feed_api_inner(request):
 
 @api_view(['POST'])
 @parser_classes([JSONParser, FormParser])
+@throttle_classes([LikeThrottle])
 def feed_like(request):
     """Like toggle — bossa qo'shadi, yana bossa olib tashlaydi"""
     murojaat_id = request.data.get('murojaat_id')
@@ -1078,6 +1108,7 @@ def feed_like(request):
 
 @api_view(['POST'])
 @parser_classes([JSONParser, FormParser])
+@throttle_classes([CommentThrottle])
 def feed_comment(request):
     """Yangi izoh qo'shish"""
     murojaat_id = request.data.get('murojaat_id')
@@ -1086,6 +1117,11 @@ def feed_comment(request):
 
     if not murojaat_id or not telegram_user_id or not matn:
         return Response({'error': 'murojaat_id, telegram_user_id va matn kerak'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        validate_text_len(matn, 'matn')
+    except ValidationError as e:
+        return Response({'error': str(e.message)}, status=status.HTTP_400_BAD_REQUEST)
 
     comment = Comment.objects.create(
         murojaat_id=int(murojaat_id),
