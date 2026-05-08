@@ -140,6 +140,9 @@
     <div class="flex items-center gap-2">
       <span class="text-[17px] font-black tracking-tight text-slate-900">Real Holat</span>
       <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-purple-500/15 text-purple-600" style="letter-spacing:0.04em;">BETA</span>
+      <span id="geoChip" class="hidden text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-1" style="background:rgba(34,197,94,0.12);color:#22c55e">
+        <span class="material-symbols-outlined" style="font-size:11px;font-variation-settings:'FILL' 1">location_on</span>Yaqin
+      </span>
     </div>
     <a href="/tma/profil/" class="w-8 h-8 rounded-full bg-black/[0.06] flex items-center justify-center active:scale-90 transition-transform">
       <span class="material-symbols-outlined text-slate-500" style="font-size:18px;font-variation-settings:'FILL' 1">person</span>
@@ -330,6 +333,7 @@ const statusIcon={'kutilmoqda':'schedule','korib_chiqilmoqda':'visibility','hal_
 // ── Feed data from API ──
 let POSTS=[];
 let feedOffset=0, feedLoading=false, feedHasMore=true;
+let USER_LAT=null, USER_LNG=null;
 
 let activePost=null;
 
@@ -413,7 +417,8 @@ async function loadFeed(){
   // Show loader on first load
   if(feedOffset===0) el.innerHTML='<div class="flex justify-center py-12"><div class="spinner"></div></div>';
   try{
-    const url=`/api/feed/?limit=10&offset=${feedOffset}${UID?'&user_id='+UID:''}`;
+    let url=`/api/feed/?limit=10&offset=${feedOffset}${UID?'&user_id='+UID:''}`;
+    if(USER_LAT&&USER_LNG) url+=`&lat=${USER_LAT}&lng=${USER_LNG}`;
     const res=await fetch(url);
     const d=await res.json();
     if(feedOffset===0) el.innerHTML='';
@@ -848,8 +853,21 @@ async function tksSubmit(){
   }
 }
 
-// ── Init ──
-loadFeed();
+// ── Init: GPS so'rash, so'ng feed yuklash ──
+(async function init(){
+  if(navigator.geolocation){
+    try{
+      const pos=await Promise.race([
+        new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:false,timeout:4000,maximumAge:300000})),
+        new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),2500))
+      ]);
+      USER_LAT=pos.coords.latitude;
+      USER_LNG=pos.coords.longitude;
+      document.getElementById('geoChip').classList.remove('hidden');
+    }catch(e){ /* GPS yo'q yoki rad etildi — geosizsiz yuklaymiz */ }
+  }
+  loadFeed();
+})();
 </script>
 </body>
 </html>

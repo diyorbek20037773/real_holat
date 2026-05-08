@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from django.db.models import Count, Subquery, OuterRef, Q
+from django.db.models import Count, Subquery, OuterRef, Q, Case, When, IntegerField, Value
 from rest_framework.decorators import api_view, parser_classes
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
@@ -864,14 +864,33 @@ def _feed_api_inner(request):
     offset = int(request.query_params.get('offset', 0))
     user_id = request.query_params.get('user_id', '')
     infratuzilma = request.query_params.get('infratuzilma', '')
+    user_lat = request.query_params.get('lat')
+    user_lng = request.query_params.get('lng')
 
     qs = Murojaat.objects.annotate(
         likes_soni=Count('likes', distinct=True),
         comments_soni=Count('comments', distinct=True),
-    ).order_by('-yuborilgan_vaqt')
+    )
 
     if infratuzilma:
         qs = qs.filter(infratuzilma=infratuzilma)
+
+    # Geo-sorting: viloyatlarni foydalanuvchi joylashuviga yaqinligiga qarab tartiblash
+    if user_lat and user_lng:
+        try:
+            ulat, ulng = float(user_lat), float(user_lng)
+            sorted_viloyats = sorted(
+                VILOYAT_COORDS.keys(),
+                key=lambda v: haversine_m(ulat, ulng, VILOYAT_COORDS[v]['lat'], VILOYAT_COORDS[v]['lng'])
+            )
+            when_clauses = [When(viloyat=v, then=Value(i)) for i, v in enumerate(sorted_viloyats)]
+            qs = qs.annotate(
+                geo_rank=Case(*when_clauses, default=Value(len(sorted_viloyats)), output_field=IntegerField())
+            ).order_by('geo_rank', '-yuborilgan_vaqt')
+        except (ValueError, TypeError):
+            qs = qs.order_by('-yuborilgan_vaqt')
+    else:
+        qs = qs.order_by('-yuborilgan_vaqt')
 
     jami = qs.count()
     items = qs[offset:offset + limit]
