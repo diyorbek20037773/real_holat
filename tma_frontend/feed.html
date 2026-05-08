@@ -257,13 +257,52 @@
     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Va'da bajarilganmi?</p>
     <div class="flex gap-3 mb-4">
       <button onclick="tksNatija('bajarildi')" id="tksBahoHa" class="tks-baho">
-        <span style="font-size:40px">&#128515;</span>
         <span class="text-sm font-bold text-slate-900">Ha, bajarildi</span>
       </button>
       <button onclick="tksNatija('muammo')" id="tksBahoYoq" class="tks-baho">
-        <span style="font-size:40px">&#128543;</span>
         <span class="text-sm font-bold text-slate-900">Yo'q</span>
       </button>
+    </div>
+
+    <!-- 5 ta savol -->
+    <div class="space-y-3 mb-3">
+      <div>
+        <p class="text-[11px] font-bold text-slate-500 mb-1.5">1. Ҳожатхона блоки қаерда?</p>
+        <div class="flex flex-wrap gap-2" data-q="1">
+          <button onclick="tksSavol(1,this)" data-val="Бино ичида" class="tks-vbtn px-3 py-1.5 rounded-xl text-[12px] font-semibold text-slate-700 transition-all active:scale-95" style="background:rgba(0,0,0,0.04);border:1.5px solid rgba(0,0,0,0.08)">Бино ичида</button>
+          <button onclick="tksSavol(1,this)" data-val="Бино ташқарисида" class="tks-vbtn px-3 py-1.5 rounded-xl text-[12px] font-semibold text-slate-700 transition-all active:scale-95" style="background:rgba(0,0,0,0.04);border:1.5px solid rgba(0,0,0,0.08)">Бино ташқарисида</button>
+        </div>
+      </div>
+      <div>
+        <p class="text-[11px] font-bold text-slate-500 mb-1.5">2. Канализация тури қандай?</p>
+        <div class="flex flex-wrap gap-2" data-q="2">
+          <button onclick="tksSavol(2,this)" data-val="Септик/ЛОС" class="tks-vbtn px-3 py-1.5 rounded-xl text-[12px] font-semibold text-slate-700 transition-all active:scale-95" style="background:rgba(0,0,0,0.04);border:1.5px solid rgba(0,0,0,0.08)">Септик/ЛОС</button>
+          <button onclick="tksSavol(2,this)" data-val="Септик қопқоқ" class="tks-vbtn px-3 py-1.5 rounded-xl text-[12px] font-semibold text-slate-700 transition-all active:scale-95" style="background:rgba(0,0,0,0.04);border:1.5px solid rgba(0,0,0,0.08)">Септик қопқоқ</button>
+          <button onclick="tksSavol(2,this)" data-val="Қазилган яма" class="tks-vbtn px-3 py-1.5 rounded-xl text-[12px] font-semibold text-slate-700 transition-all active:scale-95" style="background:rgba(0,0,0,0.04);border:1.5px solid rgba(0,0,0,0.08)">Қазилган яма</button>
+        </div>
+      </div>
+      <div>
+        <p class="text-[11px] font-bold text-slate-500 mb-1.5">3. Қўл ювиш мосламасига сув ҳозир бериладими?</p>
+        <div class="flex flex-wrap gap-2" data-q="3">
+          <button onclick="tksSavol(3,this)" data-val="Ҳа" class="tks-vbtn px-3 py-1.5 rounded-xl text-[12px] font-semibold text-slate-700 transition-all active:scale-95" style="background:rgba(0,0,0,0.04);border:1.5px solid rgba(0,0,0,0.08)">Ҳа</button>
+          <button onclick="tksSavol(3,this)" data-val="Йўқ" class="tks-vbtn px-3 py-1.5 rounded-xl text-[12px] font-semibold text-slate-700 transition-all active:scale-95" style="background:rgba(0,0,0,0.04);border:1.5px solid rgba(0,0,0,0.08)">Йўқ</button>
+        </div>
+      </div>
+      <div>
+        <p class="text-[11px] font-bold text-slate-500 mb-1.5">4. Ҳожатхоналар ўғил болалар ва қизлар учун ажратилганми?</p>
+        <div class="flex flex-wrap gap-2" data-q="4">
+          <button onclick="tksSavol(4,this)" data-val="Ҳа, айримлари" class="tks-vbtn px-3 py-1.5 rounded-xl text-[12px] font-semibold text-slate-700 transition-all active:scale-95" style="background:rgba(0,0,0,0.04);border:1.5px solid rgba(0,0,0,0.08)">Ҳа, айримлари</button>
+          <button onclick="tksSavol(4,this)" data-val="Йўқ" class="tks-vbtn px-3 py-1.5 rounded-xl text-[12px] font-semibold text-slate-700 transition-all active:scale-95" style="background:rgba(0,0,0,0.04);border:1.5px solid rgba(0,0,0,0.08)">Йўқ</button>
+        </div>
+      </div>
+      <div>
+        <p class="text-[11px] font-bold text-slate-500 mb-1.5">5. Кабиналарнинг қулфлари соз эшиклари борми?</p>
+        <div class="flex flex-wrap gap-2" data-q="5">
+          <button onclick="tksSavol(5,this)" data-val="Ҳа, ҳаммаси" class="tks-vbtn px-3 py-1.5 rounded-xl text-[12px] font-semibold text-slate-700 transition-all active:scale-95" style="background:rgba(0,0,0,0.04);border:1.5px solid rgba(0,0,0,0.08)">Ҳа, ҳаммаси</button>
+          <button onclick="tksSavol(5,this)" data-val="Қисман йўқ" class="tks-vbtn px-3 py-1.5 rounded-xl text-[12px] font-semibold text-slate-700 transition-all active:scale-95" style="background:rgba(0,0,0,0.04);border:1.5px solid rgba(0,0,0,0.08)">Қисман йўқ</button>
+          <button onclick="tksSavol(5,this)" data-val="Йўқ" class="tks-vbtn px-3 py-1.5 rounded-xl text-[12px] font-semibold text-slate-700 transition-all active:scale-95" style="background:rgba(0,0,0,0.04);border:1.5px solid rgba(0,0,0,0.08)">Йўқ</button>
+        </div>
+      </div>
     </div>
 
     <!-- Izoh -->
@@ -633,6 +672,7 @@ document.getElementById('sheet').addEventListener('touchmove',e=>e.stopPropagati
 // TEKSHIR FLOW
 // ══════════════════════════════════════════════
 let tksCoords=null, tksAllObjects=[], tksFiltered=[], tksSelectedObj=null, tksSelectedNatija='', tksFile=null, tksActiveFilter='';
+let tksSavolJavoblar={};
 
 function haversine(lat1,lng1,lat2,lng2){
   const R=6371, dLat=(lat2-lat1)*Math.PI/180, dLng=(lng2-lng1)*Math.PI/180;
@@ -765,9 +805,15 @@ function tksSelectObj(idx){
   document.getElementById('tksObjMeta').textContent=`${tksSelectedObj.tur_nomi||tksSelectedObj.tur} · ${tksSelectedObj.tuman||''} · ${fmtDist(tksSelectedObj.dist)}`;
 
   // Reset form
+  tksSavolJavoblar={};
   document.getElementById('tksBahoHa').className='tks-baho';
   document.getElementById('tksBahoYoq').className='tks-baho';
   document.getElementById('tksIzoh').value='';
+  document.querySelectorAll('.tks-vbtn').forEach(b=>{
+    b.style.borderColor='rgba(0,0,0,0.08)';
+    b.style.background='rgba(0,0,0,0.04)';
+    b.style.color='#334155';
+  });
   document.getElementById('tksPhotoIcon').textContent='add_a_photo';
   document.getElementById('tksPhotoIcon').style.color='#6366f1';
   document.getElementById('tksPhotoText').textContent='Rasm qo\'shish';
@@ -790,6 +836,19 @@ function tksNatija(val){
   document.getElementById('tksBahoYoq').className='tks-baho'+(val==='muammo'?' sel-no':'');
   const btn=document.getElementById('tksSubmitBtn');
   btn.classList.remove('opacity-40','pointer-events-none');
+}
+
+function tksSavol(num, btn){
+  const group=btn.closest('[data-q]');
+  group.querySelectorAll('.tks-vbtn').forEach(b=>{
+    b.style.borderColor='rgba(0,0,0,0.08)';
+    b.style.background='rgba(0,0,0,0.04)';
+    b.style.color='#334155';
+  });
+  btn.style.borderColor='#9d2bee';
+  btn.style.background='rgba(157,43,238,0.08)';
+  btn.style.color='#9d2bee';
+  tksSavolJavoblar[num]=btn.dataset.val;
 }
 
 document.getElementById('tksRasmInput').addEventListener('change',function(){
@@ -824,7 +883,10 @@ async function tksSubmit(){
   const fd=new FormData();
   fd.append('maktab_id',tksSelectedObj.id);
   fd.append('natija',tksSelectedNatija);
-  fd.append('izoh',document.getElementById('tksIzoh').value||'');
+  const SAVOL_NOMLAR={1:'Ҳожатхона блоки',2:'Канализация тури',3:'Сув',4:'Жинсий ажратиш',5:'Қулфлар'};
+  const savolMatn=Object.entries(tksSavolJavoblar).map(([k,v])=>`${SAVOL_NOMLAR[k]}: ${v}`).join('\n');
+  const izohVal=document.getElementById('tksIzoh').value||'';
+  fd.append('izoh',savolMatn?(izohVal?savolMatn+'\n'+izohVal:savolMatn):izohVal);
   fd.append('telegram_user_id',UID||'0');
   fd.append('telegram_username',U.username||'');
   fd.append('telegram_full_name',UNAME);
