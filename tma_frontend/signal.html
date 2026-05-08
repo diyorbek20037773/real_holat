@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Tekshiruv | Real Holat</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL@20..48,100..700,0..1&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/static/i18n/i18n.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Inter',sans-serif;background:linear-gradient(135deg,#dcfce7 0%,#e0f2fe 50%,#f3e8ff 100%);color:#0f172a;min-height:100vh;-webkit-tap-highlight-color:transparent;}
+    ::-webkit-scrollbar{display:none;}
+    .glass{background:rgba(255,255,255,0.6);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.7);}
+    .glass-sm{background:rgba(255,255,255,0.4);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.6);}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .spinner{animation:spin 0.7s linear infinite;border:2.5px solid rgba(0,0,0,0.08);border-top-color:#9d2bee;border-radius:50%;width:24px;height:24px;}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+    .fade-up{animation:fadeUp 0.3s ease-out both;}
+    .obj-card{transition:all 0.15s;border:1.5px solid rgba(0,0,0,0.06);background:rgba(255,255,255,0.7);}
+    .obj-card:active{transform:scale(0.98);background:rgba(59,130,246,0.06);}
+    .chip{display:inline-flex;align-items:center;gap:4px;padding:6px 14px;border-radius:99px;font-size:11px;font-weight:600;cursor:pointer;border:1.5px solid rgba(0,0,0,0.08);background:rgba(255,255,255,0.7);color:#64748b;transition:all 0.15s;}
+    .chip.on{background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;border-color:transparent;}
+    .chip:active{transform:scale(0.95);}
+    .v-btn{transition:all 0.15s;border:1.5px solid rgba(0,0,0,0.08);background:rgba(255,255,255,0.6);}
+    .v-btn.sel{border-color:#9d2bee;background:rgba(157,43,238,0.08);color:#9d2bee;}
+    .v-btn:active{transform:scale(0.96);}
+    .baho-btn{flex:1;display:flex;align-items:center;justify-content:center;padding:14px;border-radius:16px;font-size:14px;font-weight:700;border:2px solid rgba(0,0,0,0.08);background:rgba(255,255,255,0.6);transition:all 0.2s;cursor:pointer;}
+    .baho-btn:active{transform:scale(0.97);}
+    .baho-btn.sel-yes{border-color:#22c55e;background:rgba(34,197,94,0.1);color:#16a34a;}
+    .baho-btn.sel-no{border-color:#ef4444;background:rgba(239,68,68,0.1);color:#dc2626;}
+    .sticky-footer{position:fixed;bottom:0;left:0;right:0;padding:12px 16px 24px;background:linear-gradient(to top,rgba(220,252,231,0.98) 70%,transparent);}
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="sticky top-0 z-40" style="background:rgba(255,255,255,0.92);backdrop-filter:blur(24px);border-bottom:1px solid rgba(0,0,0,0.06);">
+  <div class="flex items-center gap-3 px-4 h-12">
+    <button id="backBtn" onclick="goBack()" class="w-8 h-8 rounded-full flex items-center justify-center active:scale-90 transition-transform flex-shrink-0" style="background:rgba(0,0,0,0.06)">
+      <span class="material-symbols-outlined text-slate-600" style="font-size:18px">arrow_back</span>
+    </button>
+    <div class="flex-1">
+      <p class="text-[14px] font-black text-slate-900" id="stepTitle" data-i18n="signal.step1_sarlavha">Ob'yektni tanlang</p>
+    </div>
+    <div class="flex items-center gap-1.5">
+      <div id="dot1" class="w-2 h-2 rounded-full transition-all" style="background:#9d2bee"></div>
+      <div id="dot2" class="w-2 h-2 rounded-full transition-all" style="background:rgba(0,0,0,0.12)"></div>
+      <div id="dot3" class="w-2 h-2 rounded-full transition-all" style="background:rgba(0,0,0,0.12)"></div>
+    </div>
+  </div>
+  <!-- Progress bar -->
+  <div class="h-1 bg-slate-100">
+    <div id="progressBar" class="h-full transition-all duration-500" style="width:33%;background:linear-gradient(90deg,#9d2bee,#6366f1)"></div>
+  </div>
+</div>
+
+<!-- ═══ STEP 1: GPS + ob'yektlar ═══ -->
+<div id="step1" class="px-4 pt-4 pb-32">
+
+  <!-- GPS tugma -->
+  <button onclick="getGPS()" id="gpsBtn" class="w-full flex items-center gap-3 p-4 rounded-2xl mb-4 active:scale-[0.98] transition-transform glass" style="border:1.5px solid rgba(59,130,246,0.2)">
+    <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style="background:linear-gradient(135deg,#3b82f6,#6366f1)">
+      <span class="material-symbols-outlined text-white" style="font-size:22px;font-variation-settings:'FILL' 1" id="gpsIcon">my_location</span>
+    </div>
+    <div class="flex-1 text-left">
+      <p class="text-sm font-bold text-slate-900" id="gpsTxt" data-i18n="signal.lokatsiya">Joylashuvni aniqlash</p>
+      <p class="text-[11px] text-slate-500" id="gpsSub" data-i18n="signal.lokatsiya_sub">GPS orqali yaqin ob'yektlarni topish</p>
+    </div>
+    <span class="material-symbols-outlined text-slate-400" style="font-size:18px">chevron_right</span>
+  </button>
+
+  <!-- Filter chips (yashirin, GPS dan keyin) -->
+  <div id="filterRow" class="hidden flex gap-2 flex-wrap mb-3">
+    <button onclick="setFilter('')" class="chip on" data-tur="" data-i18n="maktablar.barchasi">Barchasi</button>
+    <button onclick="setFilter('maktab')" class="chip" data-tur="maktab"><span class="material-symbols-outlined" style="font-size:13px;font-variation-settings:'FILL' 1">school</span>Maktab</button>
+    <button onclick="setFilter('shifoxona')" class="chip" data-tur="shifoxona"><span class="material-symbols-outlined" style="font-size:13px;font-variation-settings:'FILL' 1">local_hospital</span>Shifoxona</button>
+    <button onclick="setFilter('bogcha')" class="chip" data-tur="bogcha"><span class="material-symbols-outlined" style="font-size:13px;font-variation-settings:'FILL' 1">child_care</span>Bog'cha</button>
+    <button onclick="setFilter('sport')" class="chip" data-tur="sport"><span class="material-symbols-outlined" style="font-size:13px;font-variation-settings:'FILL' 1">fitness_center</span>Sport</button>
+  </div>
+
+  <!-- Loading -->
+  <div id="objLoading" class="hidden flex justify-center py-10"><div class="spinner"></div></div>
+
+  <!-- Ob'yektlar ro'yxati -->
+  <div id="objList" class="space-y-2"></div>
+
+  <!-- Bo'sh holat -->
+  <div id="objEmpty" class="hidden text-center py-12">
+    <span class="material-symbols-outlined text-slate-300 mb-2" style="font-size:44px">location_off</span>
+    <p class="text-sm font-semibold text-slate-400" data-i18n="signal.topilmadi">10 km atrofda ob'yekt topilmadi</p>
+  </div>
+</div>
+
+<!-- ═══ STEP 2: Savollar ═══ -->
+<div id="step2" class="hidden px-4 pt-4 pb-36">
+
+  <!-- Tanlangan ob'yekt -->
+  <div id="selObjCard" class="glass rounded-2xl p-3 mb-4 flex items-center gap-3">
+    <div id="selObjIcon" class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background:rgba(59,130,246,0.1)">
+      <span class="material-symbols-outlined" style="font-size:20px;color:#3b82f6;font-variation-settings:'FILL' 1">school</span>
+    </div>
+    <div class="flex-1 min-w-0">
+      <p class="text-sm font-bold text-slate-900 truncate" id="selObjName"></p>
+      <p class="text-[11px] text-slate-500" id="selObjMeta"></p>
+    </div>
+  </div>
+
+  <!-- Va'da -->
+  <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2" data-i18n="signal.vada">Va'da bajarilganmi?</p>
+  <div class="flex gap-3 mb-5">
+    <button onclick="setNatija('bajarildi')" id="btnHa" class="baho-btn" data-i18n="signal.ha_bajarildi">Ha, bajarildi</button>
+    <button onclick="setNatija('muammo')" id="btnYoq" class="baho-btn" data-i18n="signal.yoq_btn">Yo'q</button>
+  </div>
+
+  <!-- 5 ta savol -->
+  <div class="space-y-4" id="savollarDiv">
+
+    <div>
+      <p class="text-[12px] font-bold text-slate-600 mb-2" id="q1txt"></p>
+      <div class="flex flex-wrap gap-2" data-q="1">
+        <button onclick="setSavol(1,this)" data-key="signal.q1_a" class="v-btn px-3 py-2 rounded-xl text-[12px] font-semibold text-slate-700 active:scale-95"></button>
+        <button onclick="setSavol(1,this)" data-key="signal.q1_b" class="v-btn px-3 py-2 rounded-xl text-[12px] font-semibold text-slate-700 active:scale-95"></button>
+      </div>
+    </div>
+
+    <div>
+      <p class="text-[12px] font-bold text-slate-600 mb-2" id="q2txt"></p>
+      <div class="flex flex-wrap gap-2" data-q="2">
+        <button onclick="setSavol(2,this)" data-key="signal.q2_a" class="v-btn px-3 py-2 rounded-xl text-[12px] font-semibold text-slate-700 active:scale-95"></button>
+        <button onclick="setSavol(2,this)" data-key="signal.q2_b" class="v-btn px-3 py-2 rounded-xl text-[12px] font-semibold text-slate-700 active:scale-95"></button>
+        <button onclick="setSavol(2,this)" data-key="signal.q2_c" class="v-btn px-3 py-2 rounded-xl text-[12px] font-semibold text-slate-700 active:scale-95"></button>
+      </div>
+    </div>
+
+    <div>
+      <p class="text-[12px] font-bold text-slate-600 mb-2" id="q3txt"></p>
+      <div class="flex flex-wrap gap-2" data-q="3">
+        <button onclick="setSavol(3,this)" data-key="signal.q3_a" class="v-btn px-3 py-2 rounded-xl text-[12px] font-semibold text-slate-700 active:scale-95"></button>
+        <button onclick="setSavol(3,this)" data-key="signal.q3_b" class="v-btn px-3 py-2 rounded-xl text-[12px] font-semibold text-slate-700 active:scale-95"></button>
+      </div>
+    </div>
+
+    <div>
+      <p class="text-[12px] font-bold text-slate-600 mb-2" id="q4txt"></p>
+      <div class="flex flex-wrap gap-2" data-q="4">
+        <button onclick="setSavol(4,this)" data-key="signal.q4_a" class="v-btn px-3 py-2 rounded-xl text-[12px] font-semibold text-slate-700 active:scale-95"></button>
+        <button onclick="setSavol(4,this)" data-key="signal.q4_b" class="v-btn px-3 py-2 rounded-xl text-[12px] font-semibold text-slate-700 active:scale-95"></button>
+      </div>
+    </div>
+
+    <div>
+      <p class="text-[12px] font-bold text-slate-600 mb-2" id="q5txt"></p>
+      <div class="flex flex-wrap gap-2" data-q="5">
+        <button onclick="setSavol(5,this)" data-key="signal.q5_a" class="v-btn px-3 py-2 rounded-xl text-[12px] font-semibold text-slate-700 active:scale-95"></button>
+        <button onclick="setSavol(5,this)" data-key="signal.q5_b" class="v-btn px-3 py-2 rounded-xl text-[12px] font-semibold text-slate-700 active:scale-95"></button>
+        <button onclick="setSavol(5,this)" data-key="signal.q5_c" class="v-btn px-3 py-2 rounded-xl text-[12px] font-semibold text-slate-700 active:scale-95"></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ STEP 3: Izoh + media ═══ -->
+<div id="step3" class="hidden px-4 pt-4 pb-36">
+
+  <!-- Tanlangan ob'yekt -->
+  <div id="selObjCard2" class="glass rounded-2xl p-3 mb-4 flex items-center gap-3">
+    <div id="selObjIcon2" class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background:rgba(59,130,246,0.1)">
+      <span class="material-symbols-outlined" style="font-size:20px;color:#3b82f6;font-variation-settings:'FILL' 1">school</span>
+    </div>
+    <div class="flex-1 min-w-0">
+      <p class="text-sm font-bold text-slate-900 truncate" id="selObjName2"></p>
+      <p class="text-[11px] text-slate-500" id="selObjMeta2"></p>
+    </div>
+  </div>
+
+  <!-- Izoh -->
+  <textarea id="izohInput" rows="3" class="w-full p-3 rounded-xl text-sm resize-none mb-3 focus:outline-none focus:ring-2 focus:ring-purple-300" style="background:rgba(255,255,255,0.7);border:1.5px solid rgba(0,0,0,0.08);color:#0f172a;font-family:inherit;" data-i18n-ph="signal.izoh_ph" placeholder="Izoh (ixtiyoriy)..."></textarea>
+
+  <!-- Rasm -->
+  <input type="file" id="rasmInput" accept="image/*" capture="environment" class="hidden" onchange="rasmTanlandi(this)"/>
+  <button onclick="document.getElementById('rasmInput').click()" id="rasmBtn" class="w-full flex items-center gap-3 p-3 rounded-xl mb-2 active:scale-[0.98] transition-all text-left glass-sm" style="border:1.5px solid rgba(0,0,0,0.06)">
+    <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(99,102,241,0.1)">
+      <span class="material-symbols-outlined" style="font-size:18px;color:#6366f1;font-variation-settings:'FILL' 1" id="rasmIcon">add_a_photo</span>
+    </div>
+    <div class="flex-1">
+      <p class="text-sm font-semibold text-slate-900" id="rasmTxt" data-i18n="signal.rasm">Rasm qo'shish</p>
+      <p class="text-[10px] text-slate-400">JPEG / PNG — maks. 10MB</p>
+    </div>
+  </button>
+  <img id="rasmPreview" class="hidden w-full rounded-xl object-cover mb-2" style="max-height:180px"/>
+
+  <!-- Video -->
+  <input type="file" id="videoInput" accept="video/*" class="hidden" onchange="videoTanlandi(this)"/>
+  <button onclick="document.getElementById('videoInput').click()" id="videoBtn" class="w-full flex items-center gap-3 p-3 rounded-xl mb-3 active:scale-[0.98] transition-all text-left glass-sm" style="border:1.5px solid rgba(0,0,0,0.06)">
+    <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(239,68,68,0.1)">
+      <span class="material-symbols-outlined" style="font-size:18px;color:#ef4444;font-variation-settings:'FILL' 1" id="videoIcon">videocam</span>
+    </div>
+    <div class="flex-1">
+      <p class="text-sm font-semibold text-slate-900" id="videoTxt" data-i18n="signal.video">Video qo'shish</p>
+      <p class="text-[10px] text-slate-400">Maks. 60 soniya / 20MB</p>
+    </div>
+  </button>
+</div>
+
+<!-- ═══ Muvaffaqiyat ═══ -->
+<div id="stepSuccess" class="hidden flex flex-col items-center justify-center px-6 py-16 text-center">
+  <div class="w-20 h-20 rounded-full flex items-center justify-center mb-4 fade-up" style="background:rgba(34,197,94,0.12)">
+    <span class="material-symbols-outlined" style="font-size:44px;color:#22c55e;font-variation-settings:'FILL' 1">check_circle</span>
+  </div>
+  <h2 class="text-xl font-black text-slate-900 mb-2 fade-up" data-i18n="signal.muvaffaqiyat">Qabul qilindi!</h2>
+  <p class="text-sm text-slate-500 mb-1 fade-up" id="successMsg"></p>
+  <p class="text-[12px] font-bold mb-6 fade-up" id="badgeMsg" style="color:#9d2bee"></p>
+  <button onclick="location.href='/tma/feed/'" class="px-8 py-3 rounded-full text-sm font-black text-white active:scale-95 transition-transform fade-up" style="background:linear-gradient(135deg,#9d2bee,#6366f1)">
+    Lentaga qaytish
+  </button>
+</div>
+
+<!-- Sticky footer (step 2 va 3 uchun) -->
+<div id="stickyFooter" class="sticky-footer hidden">
+  <button id="footerBtn" onclick="footerAction()" class="w-full py-4 rounded-full font-black text-base text-white active:scale-95 transition-transform" style="background:linear-gradient(135deg,#9d2bee,#6366f1);box-shadow:0 4px 20px rgba(157,43,238,0.35)">
+    <span id="footerBtnTxt" data-i18n="signal.keyingisi">Keyingisi →</span>
+  </button>
+</div>
+
+<script>
+const tg=window.Telegram.WebApp; tg.ready(); tg.expand();
+const U=tg.initDataUnsafe?.user||{}, UID=U.id||'0', UNAME=`${U.first_name||''} ${U.last_name||''}`.trim();
+
+let curStep=1;
+let coords=null, allObjs=[], filtered=[], activeFilter='';
+let selObj=null, natija='', savollar={};
+let rasmFile=null, videoFile=null;
+
+const TUR_ICONS={
+  maktab:{icon:'school',color:'#3b82f6',bg:'rgba(59,130,246,0.1)'},
+  shifoxona:{icon:'local_hospital',color:'#ef4444',bg:'rgba(239,68,68,0.1)'},
+  bogcha:{icon:'child_care',color:'#22c55e',bg:'rgba(34,197,94,0.1)'},
+  sport:{icon:'fitness_center',color:'#f59e0b',bg:'rgba(245,158,11,0.1)'},
+};
+
+function haversine(lat1,lng1,lat2,lng2){
+  const R=6371,d1=(lat2-lat1)*Math.PI/180,d2=(lng2-lng1)*Math.PI/180;
+  const a=Math.sin(d1/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(d2/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function fmtDist(km){return km<1?(km*1000).toFixed(0)+' m':km.toFixed(1)+' km';}
+
+// ── Savol matnlarini i18n dan olish ──
+function fillQuestionTexts(){
+  document.getElementById('q1txt').textContent=t('signal.q1');
+  document.getElementById('q2txt').textContent=t('signal.q2');
+  document.getElementById('q3txt').textContent=t('signal.q3');
+  document.getElementById('q4txt').textContent=t('signal.q4');
+  document.getElementById('q5txt').textContent=t('signal.q5');
+  // Variant tugmalar matnlari
+  document.querySelectorAll('.v-btn[data-key]').forEach(btn=>{
+    btn.textContent=t(btn.dataset.key);
+  });
+  // Ha/Yo'q tugmalar
+  document.getElementById('btnHa').textContent=t('signal.ha_bajarildi');
+  document.getElementById('btnYoq').textContent=t('signal.yoq_btn');
+}
+
+// ── Step navigatsiya ──
+function setStep(n){
+  curStep=n;
+  ['step1','step2','step3','stepSuccess'].forEach((id,i)=>{
+    document.getElementById(id).classList.toggle('hidden',i+1!==n && !(id==='stepSuccess'&&n===4));
+  });
+  document.getElementById('stepSuccess').classList.toggle('hidden',n!==4);
+  document.getElementById('stickyFooter').classList.toggle('hidden',n===1||n===4);
+
+  const bar=document.getElementById('progressBar');
+  bar.style.width=n===1?'33%':n===2?'66%':n===3?'90%':'100%';
+
+  const dots=['dot1','dot2','dot3'];
+  dots.forEach((d,i)=>{
+    document.getElementById(d).style.background=i<n-1?'#22c55e':i===n-1?'#9d2bee':'rgba(0,0,0,0.12)';
+  });
+
+  const titles=['signal.step1_sarlavha','signal.step2_sarlavha','signal.step3_sarlavha'];
+  if(n<=3) document.getElementById('stepTitle').textContent=t(titles[n-1]);
+
+  const footerTxt=document.getElementById('footerBtnTxt');
+  footerTxt.textContent=n===3?t('signal.yuborish'):t('signal.keyingisi');
+
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function goBack(){
+  if(curStep>1){setStep(curStep-1);}
+  else{history.back();}
+}
+
+// ── GPS ──
+function getGPS(){
+  const icon=document.getElementById('gpsIcon'), txt=document.getElementById('gpsTxt'), sub=document.getElementById('gpsSub');
+  icon.textContent='sync'; icon.style.animation='spin 1s linear infinite';
+  txt.textContent=t('signal.aniqlanmoqda'); sub.textContent='';
+
+  navigator.geolocation.getCurrentPosition(
+    pos=>{
+      coords={lat:pos.coords.latitude,lng:pos.coords.longitude};
+      icon.textContent='check_circle'; icon.style.animation=''; icon.style.color='#22c55e';
+      txt.textContent=t('signal.aniqlandi');
+      sub.textContent=`${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`;
+      document.getElementById('gpsBtn').style.borderColor='rgba(34,197,94,0.3)';
+      document.getElementById('gpsBtn').style.background='rgba(34,197,94,0.05)';
+      loadObjects();
+    },
+    ()=>{
+      icon.textContent='location_off'; icon.style.animation=''; icon.style.color='#ef4444';
+      txt.textContent=t('geo.xato'); sub.textContent='';
+    },
+    {enableHighAccuracy:true,timeout:12000}
+  );
+}
+
+async function loadObjects(){
+  document.getElementById('objLoading').classList.remove('hidden');
+  document.getElementById('objList').innerHTML='';
+  document.getElementById('objEmpty').classList.add('hidden');
+  try{
+    const res=await fetch('/api/maktablar/');
+    const d=await res.json();
+    allObjs=(d.maktablar||[])
+      .map(o=>({...o,dist:haversine(coords.lat,coords.lng,o.lat,o.lng)}))
+      .filter(o=>o.dist<=10)
+      .sort((a,b)=>a.dist-b.dist);
+    activeFilter='';
+    document.getElementById('filterRow').classList.remove('hidden');
+    renderObjects();
+  }finally{
+    document.getElementById('objLoading').classList.add('hidden');
+  }
+}
+
+function setFilter(tur){
+  activeFilter=tur;
+  document.querySelectorAll('.chip').forEach(c=>{
+    c.classList.toggle('on',(c.dataset.tur||'')==tur);
+  });
+  renderObjects();
+}
+
+function renderObjects(){
+  filtered=activeFilter?allObjs.filter(o=>o.tur===activeFilter):allObjs;
+  const list=document.getElementById('objList'), empty=document.getElementById('objEmpty');
+  if(!filtered.length){list.innerHTML='';empty.classList.remove('hidden');return;}
+  empty.classList.add('hidden');
+  list.innerHTML=filtered.map((o,i)=>{
+    const ti=TUR_ICONS[o.tur]||{icon:'apartment',color:'#9d2bee',bg:'rgba(157,43,238,0.1)'};
+    return`<div class="obj-card rounded-2xl p-3 flex items-center gap-3 cursor-pointer fade-up" style="animation-delay:${i*0.04}s" onclick="selectObj(${i})">
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background:${ti.bg}">
+        <span class="material-symbols-outlined" style="font-size:20px;color:${ti.color};font-variation-settings:'FILL' 1">${ti.icon}</span>
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-bold text-slate-900 truncate">${o.nom}</p>
+        <p class="text-[11px] text-slate-400">${o.tur_nomi||o.tur} · ${o.tuman||''}</p>
+      </div>
+      <span class="text-xs font-bold text-slate-400 flex-shrink-0">${fmtDist(o.dist)}</span>
+    </div>`;
+  }).join('');
+}
+
+function selectObj(idx){
+  selObj=filtered[idx];
+  if(!selObj)return;
+  natija=''; savollar={};
+
+  const ti=TUR_ICONS[selObj.tur]||{icon:'apartment',color:'#9d2bee',bg:'rgba(157,43,238,0.1)'};
+  const meta=`${selObj.tur_nomi||selObj.tur} · ${selObj.tuman||''} · ${fmtDist(selObj.dist)}`;
+
+  // Step2 card
+  document.getElementById('selObjIcon').style.background=ti.bg;
+  document.getElementById('selObjIcon').innerHTML=`<span class="material-symbols-outlined" style="font-size:20px;color:${ti.color};font-variation-settings:'FILL' 1">${ti.icon}</span>`;
+  document.getElementById('selObjName').textContent=selObj.nom;
+  document.getElementById('selObjMeta').textContent=meta;
+
+  // Step3 card
+  document.getElementById('selObjIcon2').style.background=ti.bg;
+  document.getElementById('selObjIcon2').innerHTML=`<span class="material-symbols-outlined" style="font-size:20px;color:${ti.color};font-variation-settings:'FILL' 1">${ti.icon}</span>`;
+  document.getElementById('selObjName2').textContent=selObj.nom;
+  document.getElementById('selObjMeta2').textContent=meta;
+
+  // Reset form
+  document.getElementById('btnHa').className='baho-btn';
+  document.getElementById('btnYoq').className='baho-btn';
+  document.querySelectorAll('.v-btn').forEach(b=>b.classList.remove('sel'));
+
+  fillQuestionTexts();
+  setStep(2);
+}
+
+// ── Step2: Va'da va savollar ──
+function setNatija(val){
+  natija=val;
+  document.getElementById('btnHa').className='baho-btn'+(val==='bajarildi'?' sel-yes':'');
+  document.getElementById('btnYoq').className='baho-btn'+(val==='muammo'?' sel-no':'');
+}
+
+function setSavol(num,btn){
+  btn.closest('[data-q]').querySelectorAll('.v-btn').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  savollar[num]=btn.textContent;
+}
+
+// ── Media ──
+function rasmTanlandi(input){
+  if(!input.files[0])return;
+  if(input.files[0].size>10*1024*1024){tg.showAlert('Rasm 10MB dan oshmasligi kerak');input.value='';return;}
+  rasmFile=input.files[0];
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const img=document.getElementById('rasmPreview');
+    img.src=e.target.result; img.classList.remove('hidden');
+  };
+  reader.readAsDataURL(rasmFile);
+  document.getElementById('rasmIcon').textContent='check_circle';
+  document.getElementById('rasmIcon').style.color='#22c55e';
+  document.getElementById('rasmTxt').textContent=rasmFile.name.substring(0,28);
+}
+
+function videoTanlandi(input){
+  if(!input.files[0])return;
+  const file=input.files[0];
+  if(file.size>20*1024*1024){tg.showAlert('Video 20MB dan oshmasligi kerak');input.value='';return;}
+  const url=URL.createObjectURL(file);
+  const tmp=document.createElement('video');
+  tmp.preload='metadata'; tmp.src=url;
+  tmp.onloadedmetadata=()=>{
+    URL.revokeObjectURL(url);
+    if(tmp.duration>60){tg.showAlert('Video 60 soniyadan oshmasligi kerak');input.value='';return;}
+    videoFile=file;
+    document.getElementById('videoIcon').textContent='check_circle';
+    document.getElementById('videoIcon').style.color='#22c55e';
+    document.getElementById('videoTxt').textContent=file.name.substring(0,28);
+  };
+}
+
+// ── Footer tugmasi ──
+function footerAction(){
+  if(curStep===2){
+    if(!natija){tg.showAlert(t('signal.vada'));return;}
+    setStep(3);
+  } else if(curStep===3){
+    submit();
+  }
+}
+
+// ── Yuborish ──
+async function submit(){
+  const btn=document.getElementById('footerBtn');
+  btn.disabled=true; btn.textContent='GPS aniqlanmoqda...';
+
+  const gps=await new Promise(res=>{
+    if(!navigator.geolocation){res(null);return;}
+    navigator.geolocation.getCurrentPosition(
+      p=>res({lat:p.coords.latitude,lng:p.coords.longitude}),
+      ()=>res(null),
+      {timeout:8000,maximumAge:30000,enableHighAccuracy:true}
+    );
+  });
+
+  if(!gps){
+    tg.showAlert(t('geo.xato'));
+    btn.disabled=false; btn.textContent=t('signal.yuborish');
+    return;
+  }
+
+  btn.textContent=t('common.saqlanmoqda');
+
+  // Savol javoblarini matn sifatida izohga qo'shish
+  const SAVOL_NOMLAR={1:t('signal.q1'),2:t('signal.q2'),3:t('signal.q3'),4:t('signal.q4'),5:t('signal.q5')};
+  const savolMatn=Object.entries(savollar).map(([k,v])=>`${SAVOL_NOMLAR[k]}: ${v}`).join('\n');
+  const izohVal=document.getElementById('izohInput').value||'';
+  const fullIzoh=savolMatn?(izohVal?savolMatn+'\n'+izohVal:savolMatn):izohVal;
+
+  const fd=new FormData();
+  fd.append('maktab_id',selObj.id);
+  fd.append('natija',natija);
+  fd.append('izoh',fullIzoh);
+  fd.append('lat',gps.lat);
+  fd.append('lng',gps.lng);
+  fd.append('init_data',tg.initData||'');
+  fd.append('telegram_user_id',UID);
+  fd.append('telegram_username',U.username||'');
+  fd.append('telegram_full_name',UNAME);
+  if(rasmFile) fd.append('rasm',rasmFile);
+  if(videoFile) fd.append('video',videoFile);
+
+  try{
+    const res=await fetch('/api/tekshiruv/',{method:'POST',body:fd});
+    const d=await res.json();
+    if(res.ok&&d.success){
+      document.getElementById('successMsg').textContent=
+        d.user_ball!==undefined?`+10 ball! Jami: ${d.user_ball} ball`:
+        `Mamnuniyat: ${d.mamnuniyat_foizi||0}%`;
+      if(d.yangi_badge) document.getElementById('badgeMsg').textContent=d.yangi_badge.nom+' yutuq ochildi! 🎉';
+      setStep(4);
+    } else if(d.geo_error){
+      tg.showAlert('📍 '+d.error);
+    } else {
+      throw new Error(d.error||t('common.xato'));
+    }
+  }catch(e){
+    tg.showAlert(t('common.xato')+': '+e.message);
+  }finally{
+    btn.disabled=false; btn.textContent=t('signal.yuborish');
+  }
+}
+
+// Init
+applyI18n();
+</script>
+</body>
+</html>

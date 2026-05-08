@@ -61,6 +61,9 @@ def tma_feed(request):
 def tma_profil(request):
     return render(request, 'profil.html')
 
+def tma_signal(request):
+    return render(request, 'signal.html')
+
 
 # ─── API: Statistika ─────────────────────────────────────────────────────────
 

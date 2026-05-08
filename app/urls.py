@@ -11,6 +11,7 @@ urlpatterns = [
     path('tma/tahlil/', views.tma_tahlil, name='tma_tahlil'),
     path('tma/feed/', views.tma_feed, name='tma_feed'),
     path('tma/profil/', views.tma_profil, name='tma_profil'),
+    path('tma/signal/', views.tma_signal, name='tma_signal'),
 
     # ── REST API ────────────────────────────────────────────────
     path('api/statistika/', views.statistika_api, name='api_statistika'),
