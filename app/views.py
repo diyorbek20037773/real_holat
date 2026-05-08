@@ -175,6 +175,9 @@ def murojaat_yuborish(request):
         except Exception:
             pass  # Rasm saqlanmasa ham murojaat qabul qilinadi
 
+    from django.core.cache import cache
+    cache.delete('statistika_v1')
+
     return Response({
         'success': True,
         'id': murojaat.id,
@@ -547,6 +550,9 @@ def tekshiruv_yuborish(request):
         maktab.holat = 'nosoz'
     maktab.save(update_fields=['holat'])
 
+    from django.core.cache import cache
+    cache.delete_many(['statistika_v1', 'tahlil_v1', 'viloyatlar_v1', f'tumanlari_{maktab.viloyat}'])
+
     # ── Geymifikatsiya: ball va badge hisoblash ──
     uid = int(telegram_user_id)
     user_jami = Tekshiruv.objects.filter(telegram_user_id=uid).count()
@@ -599,27 +605,41 @@ def tekshiruv_yuborish(request):
 @api_view(['GET'])
 def tahlil_api(request):
     """Solishtirma tahlil uchun umumlashtirilgan ma'lumotlar"""
+    from django.core.cache import cache
+    CACHE_KEY = 'tahlil_v1'
+    cached = cache.get(CACHE_KEY)
+    if cached:
+        return Response(cached)
 
-    # 1. Viloyatlar bo'yicha mamnuniyat
+    # 1. Viloyatlar bo'yicha — 2 ta query (oldin: 84)
+    vil_tekshiruv = {
+        r['maktab__viloyat']: r
+        for r in Tekshiruv.objects.values('maktab__viloyat').annotate(
+            jami=Count('id'),
+            bajarildi=Count('id', filter=Q(natija='bajarildi')),
+        )
+    }
+    maktab_vil_soni = dict(
+        Maktab.objects.values('viloyat').annotate(soni=Count('id')).values_list('viloyat', 'soni')
+    )
     viloyatlar_tahlil = []
     for kod, nom in VILOYATLAR:
-        maktablar = Maktab.objects.filter(viloyat=kod)
-        if not maktablar.exists():
+        if kod not in maktab_vil_soni:
             continue
-        maktab_ids = list(maktablar.values_list('id', flat=True))
-        jami = Tekshiruv.objects.filter(maktab_id__in=maktab_ids).count()
-        bajarildi = Tekshiruv.objects.filter(maktab_id__in=maktab_ids, natija='bajarildi').count()
+        stats = vil_tekshiruv.get(kod, {'jami': 0, 'bajarildi': 0})
+        jami = stats['jami']
+        bajarildi = stats['bajarildi']
         foiz = round(bajarildi / jami * 100) if jami else 0
         viloyatlar_tahlil.append({
             'viloyat': nom,
-            'maktablar_soni': maktablar.count(),
+            'maktablar_soni': maktab_vil_soni[kod],
             'jami_tekshiruv': jami,
             'bajarildi': bajarildi,
             'muammo': jami - bajarildi,
             'mamnuniyat_foizi': foiz,
         })
 
-    # 2. Muammo turlari (va'dalar bo'yicha)
+    # 2. Muammo turlari — 1 query (o'zgarmadi, allaqachon yaxshi)
     muammo_turlari = (
         Tekshiruv.objects
         .filter(natija='muammo', vaada__isnull=False)
@@ -628,32 +648,32 @@ def tahlil_api(request):
         .order_by('-soni')[:8]
     )
 
-    # 3. Top 5 maktab — eng yaxshi va eng yomon
-    maktablar = Maktab.objects.all()
+    # 3. Maktab reyting — 1 query (oldin: 22,000)
+    maktablar_ann = Maktab.objects.annotate(
+        _jami=Count('tekshiruvlar', distinct=True),
+        _bajarildi=Count('tekshiruvlar', filter=Q(tekshiruvlar__natija='bajarildi'), distinct=True),
+    ).filter(_jami__gt=0)
     maktab_reytingi = []
-    for m in maktablar:
-        jami = Tekshiruv.objects.filter(maktab=m).count()
-        if jami == 0:
-            continue
-        bajarildi = Tekshiruv.objects.filter(maktab=m, natija='bajarildi').count()
+    vil_display = dict(VILOYATLAR)
+    for m in maktablar_ann:
+        jami = m._jami
+        bajarildi = m._bajarildi
         foiz = round(bajarildi / jami * 100)
         maktab_reytingi.append({
             'id': m.id,
             'nom': m.nom,
-            'viloyat': m.get_viloyat_display(),
+            'viloyat': vil_display.get(m.viloyat, m.viloyat),
             'tuman': m.tuman,
             'mamnuniyat_foizi': foiz,
             'jami_tekshiruv': jami,
         })
-
     maktab_reytingi.sort(key=lambda x: x['mamnuniyat_foizi'], reverse=True)
 
-    # 4. Umumiy ko'rsatkichlar
-    jami_t = Tekshiruv.objects.count()
-    baj_t = Tekshiruv.objects.filter(natija='bajarildi').count()
-    mum_t = jami_t - baj_t
+    # 4. Umumiy — annotate dan qayta hisoblash (query yo'q)
+    jami_t = sum(r['jami_tekshiruv'] for r in viloyatlar_tahlil)
+    baj_t = sum(r['bajarildi'] for r in viloyatlar_tahlil)
 
-    return Response({
+    data = {
         'viloyatlar': viloyatlar_tahlil,
         'muammo_turlari': [
             {'nom': item['vaada__nom'], 'soni': item['soni']}
@@ -664,11 +684,13 @@ def tahlil_api(request):
         'umumiy': {
             'jami_tekshiruv': jami_t,
             'bajarildi': baj_t,
-            'muammo': mum_t,
+            'muammo': jami_t - baj_t,
             'mamnuniyat_foizi': round(baj_t / jami_t * 100) if jami_t else 0,
             'tekshirilgan_maktablar': len(maktab_reytingi),
         },
-    })
+    }
+    cache.set(CACHE_KEY, data, timeout=300)
+    return Response(data)
 
 
 @api_view(['GET'])
@@ -684,22 +706,32 @@ def meta_api(request):
 @api_view(['GET'])
 def viloyatlar_api(request):
     """Har bir viloyat uchun maktab va va'da soni (xaritada bubble ko'rsatish)"""
+    from django.core.cache import cache
+    CACHE_KEY = 'viloyatlar_v1'
+    cached = cache.get(CACHE_KEY)
+    if cached:
+        return Response(cached)
+
+    maktab_soni = dict(
+        Maktab.objects.values('viloyat').annotate(soni=Count('id')).values_list('viloyat', 'soni')
+    )
+    vaada_soni = dict(
+        Vaada.objects.values('maktab__viloyat').annotate(soni=Count('id')).values_list('maktab__viloyat', 'soni')
+    )
     result = []
     for kod, nom in VILOYATLAR:
-        coords = VILOYAT_COORDS.get(kod, {'lat': 41.2995, 'lng': 69.2401})
-        maktablar = Maktab.objects.filter(viloyat=kod)
-        if not maktablar.exists():
+        if kod not in maktab_soni:
             continue
-        maktab_ids = list(maktablar.values_list('id', flat=True))
-        vaadalar_soni = Vaada.objects.filter(maktab_id__in=maktab_ids).count()
+        coords = VILOYAT_COORDS.get(kod, {'lat': 41.2995, 'lng': 69.2401})
         result.append({
             'kod': kod,
             'nom': nom,
             'lat': coords['lat'],
             'lng': coords['lng'],
-            'maktablar_soni': maktablar.count(),
-            'vaadalar_soni': vaadalar_soni,
+            'maktablar_soni': maktab_soni[kod],
+            'vaadalar_soni': vaada_soni.get(kod, 0),
         })
+    cache.set(CACHE_KEY, result, timeout=3600)
     return Response(result)
 
 
@@ -769,9 +801,15 @@ def maktab_sync(request):
 @api_view(['GET'])
 def tumanlari_api(request):
     """Berilgan viloyatdagi tumanlar va har birida nechta maktab/va'da bor"""
+    from django.core.cache import cache
     viloyat = request.query_params.get('viloyat')
     if not viloyat:
         return Response({'error': 'viloyat parametri kerak'}, status=status.HTTP_400_BAD_REQUEST)
+
+    CACHE_KEY = f'tumanlari_{viloyat}'
+    cached = cache.get(CACHE_KEY)
+    if cached:
+        return Response(cached)
 
     tumanlari = (
         Maktab.objects.filter(viloyat=viloyat)
@@ -779,18 +817,21 @@ def tumanlari_api(request):
         .annotate(maktablar_soni=Count('id'))
         .order_by('tuman')
     )
-
-    result = []
-    for t in tumanlari:
-        maktab_ids = list(
-            Maktab.objects.filter(viloyat=viloyat, tuman=t['tuman']).values_list('id', flat=True)
-        )
-        vaadalar_soni = Vaada.objects.filter(maktab_id__in=maktab_ids).count()
-        result.append({
+    vaada_per_tuman = dict(
+        Vaada.objects.filter(maktab__viloyat=viloyat)
+        .values('maktab__tuman')
+        .annotate(soni=Count('id'))
+        .values_list('maktab__tuman', 'soni')
+    )
+    result = [
+        {
             'nom': t['tuman'],
             'maktablar_soni': t['maktablar_soni'],
-            'vaadalar_soni': vaadalar_soni,
-        })
+            'vaadalar_soni': vaada_per_tuman.get(t['tuman'], 0),
+        }
+        for t in tumanlari
+    ]
+    cache.set(CACHE_KEY, result, timeout=300)
     return Response(result)
 
 
