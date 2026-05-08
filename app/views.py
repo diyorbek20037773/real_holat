@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from django.db.models import Count, Subquery, OuterRef, Q, Case, When, IntegerField, Value
+from django.db.models import Count, Subquery, OuterRef, Q, Case, When, IntegerField, Value, Max
 from rest_framework.decorators import api_view, parser_classes
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
@@ -67,30 +67,51 @@ def tma_signal(request):
 
 # ─── API: Statistika ─────────────────────────────────────────────────────────
 
-@api_view(['GET'])
-def statistika_api(request):
+def _statistika_hisoblash():
+    from django.core.cache import cache
+    CACHE_KEY = 'statistika_v1'
+    cached = cache.get(CACHE_KEY)
+    if cached:
+        return cached
+
     stat = Statistika.objects.first()
     if not stat:
         stat = Statistika.objects.create()
 
-    jami_tekshiruv = Tekshiruv.objects.count()
-    bajarildi = Tekshiruv.objects.filter(natija='bajarildi').count()
-    muammo = Tekshiruv.objects.filter(natija='muammo').count()
+    aggs = Tekshiruv.objects.aggregate(
+        jami=Count('id'),
+        bajarildi=Count('id', filter=Q(natija='bajarildi')),
+    )
+    jami_tekshiruv = aggs['jami']
+    bajarildi = aggs['bajarildi']
+    muammo = jami_tekshiruv - bajarildi
     mamnuniyat = round(bajarildi / jami_tekshiruv * 100) if jami_tekshiruv else 0
 
-    return Response({
+    murojaat_aggs = Murojaat.objects.aggregate(
+        jami=Count('id'),
+        hal_qilingan=Count('id', filter=Q(holat='hal_qilindi')),
+    )
+
+    data = {
         'maktablar_soni': stat.maktablar_soni,
         'bogchalar_soni': stat.bogchalar_soni,
         'tibbiyot_soni': stat.tibbiyot_soni,
         'sport_soni': stat.sport_soni,
-        'murojaatlar_soni': Murojaat.objects.count(),
-        'hal_qilingan': Murojaat.objects.filter(holat='hal_qilindi').count(),
+        'murojaatlar_soni': murojaat_aggs['jami'],
+        'hal_qilingan': murojaat_aggs['hal_qilingan'],
         'jami_tekshiruv': jami_tekshiruv,
         'bajarildi': bajarildi,
         'muammo': muammo,
         'mamnuniyat_foizi': mamnuniyat,
         'tekshirilgan_maktablar': Maktab.objects.filter(tekshiruvlar__isnull=False).distinct().count(),
-    })
+    }
+    cache.set(CACHE_KEY, data, timeout=60)
+    return data
+
+
+@api_view(['GET'])
+def statistika_api(request):
+    return Response(_statistika_hisoblash())
 
 
 # ─── API: Murojaat ───────────────────────────────────────────────────────────
@@ -185,10 +206,30 @@ def murojaatlar_royxati(request):
 
 # ─── API: Maktablar ──────────────────────────────────────────────────────────
 
+_ISHONCH_TABLE = [(0,0),(1,35),(5,68),(10,79),(20,90),(50,98)]
+
+def _ishonch_darajasi_hisob(n):
+    if n == 0:
+        return 0
+    for i in range(len(_ISHONCH_TABLE) - 1):
+        x0, y0 = _ISHONCH_TABLE[i]
+        x1, y1 = _ISHONCH_TABLE[i + 1]
+        if x0 <= n <= x1:
+            return round(y0 + (y1 - y0) * (n - x0) / (x1 - x0))
+    return 98
+
+
 @api_view(['GET'])
 def maktablar_royxati(request):
     """Barcha obyektlar ro'yxati + real-time statistika. ?viloyat=X&tuman=Y&tur=Z filter qilish mumkin"""
-    maktablar = Maktab.objects.prefetch_related('tekshiruvlar', 'vaadalar').all()
+    eskirish_kuni = getattr(settings, 'MONITORING_ESKIRISH_KUNI', 90)
+
+    maktablar = Maktab.objects.annotate(
+        _jami=Count('tekshiruvlar', distinct=True),
+        _bajarildi=Count('tekshiruvlar', filter=Q(tekshiruvlar__natija='bajarildi'), distinct=True),
+        _oxirgi_vaqt=Max('tekshiruvlar__vaqt'),
+        _vaadalar_soni=Count('vaadalar', distinct=True),
+    )
     viloyat_filter = request.query_params.get('viloyat')
     tuman_filter = request.query_params.get('tuman')
     tur_filter = request.query_params.get('tur')
@@ -203,11 +244,34 @@ def maktablar_royxati(request):
         maktablar = maktablar.filter(
             Q(nom__icontains=q) | Q(tuman__icontains=q) | Q(manzil__icontains=q)
         )
+
+    now = timezone.now()
+    rang_hex_map = {'yashil': '#22c55e', 'sariq': '#f59e0b', 'qizil': '#ef4444', 'kulrang': '#94a3b8'}
     data = []
     for m in maktablar:
-        jami = Tekshiruv.objects.filter(maktab=m).count()
-        bajarildi = Tekshiruv.objects.filter(maktab=m, natija='bajarildi').count()
+        jami = m._jami
+        bajarildi = m._bajarildi
+        muammo_soni = jami - bajarildi
         foiz = round(bajarildi / jami * 100) if jami else None
+
+        eskirgan = bool(m._oxirgi_vaqt and (now - m._oxirgi_vaqt).days > eskirish_kuni)
+        ishonch = _ishonch_darajasi_hisob(jami)
+        nomuvofiqlik = (
+            jami >= 3
+            and (bajarildi / jami >= 0.3)
+            and (muammo_soni / jami >= 0.3)
+        )
+
+        if jami == 0 or eskirgan:
+            xarita_rangi = 'kulrang'
+        elif foiz < 40:
+            xarita_rangi = 'qizil'
+        elif nomuvofiqlik:
+            xarita_rangi = 'sariq'
+        elif foiz >= 70 and ishonch >= 50:
+            xarita_rangi = 'yashil'
+        else:
+            xarita_rangi = 'sariq'
 
         if foiz is None:
             holat = 'tekshirilmagan'
@@ -222,8 +286,6 @@ def maktablar_royxati(request):
             holat = 'nosoz'
             holat_rangi = '#ef4444'
 
-        xarita_rangi = m.xarita_rangi()
-        rang_hex = {'yashil': '#22c55e', 'sariq': '#f59e0b', 'qizil': '#ef4444', 'kulrang': '#94a3b8'}.get(xarita_rangi, '#94a3b8')
         data.append({
             'id': m.id,
             'nom': m.nom,
@@ -237,16 +299,16 @@ def maktablar_royxati(request):
             'lng': m.lng,
             'jami_tekshiruv': jami,
             'bajarildi': bajarildi,
-            'muammo': jami - bajarildi,
+            'muammo': muammo_soni,
             'mamnuniyat_foizi': foiz,
             'holat': holat,
             'holat_rangi': holat_rangi,
             'xarita_rangi': xarita_rangi,
-            'xarita_rangi_hex': rang_hex,
-            'ishonch_darajasi': m.ishonch_darajasi(),
-            'nomuvofiqlik': m.nomuvofiqlik_bayrogi(),
-            'eskirgan': m.eskirgan(),
-            'vaadalar_soni': m.vaadalar.count(),
+            'xarita_rangi_hex': rang_hex_map.get(xarita_rangi, '#94a3b8'),
+            'ishonch_darajasi': ishonch,
+            'nomuvofiqlik': nomuvofiqlik,
+            'eskirgan': eskirgan,
+            'vaadalar_soni': m._vaadalar_soni,
         })
 
     return Response({'maktablar': data, 'jami': len(data)})
@@ -895,8 +957,7 @@ def _feed_api_inner(request):
     else:
         qs = qs.order_by('-yuborilgan_vaqt')
 
-    jami = qs.count()
-    items = qs[offset:offset + limit]
+    items = list(qs[offset:offset + limit])
 
     # User liked qaysilarini oldindan olish
     liked_ids = set()
@@ -948,8 +1009,7 @@ def _feed_api_inner(request):
 
     return Response({
         'results': results,
-        'jami': jami,
-        'has_more': offset + limit < jami,
+        'has_more': len(items) == limit,
     })
 
 

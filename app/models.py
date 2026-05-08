@@ -68,6 +68,13 @@ class Murojaat(models.Model):
         ordering = ['-yuborilgan_vaqt']
         verbose_name = 'Murojaat'
         verbose_name_plural = 'Murojaatlar'
+        indexes = [
+            models.Index(fields=['-yuborilgan_vaqt']),
+            models.Index(fields=['viloyat', '-yuborilgan_vaqt']),
+            models.Index(fields=['telegram_user_id']),
+            models.Index(fields=['holat']),
+            models.Index(fields=['infratuzilma']),
+        ]
 
     def __str__(self):
         return f"{self.telegram_full_name or self.telegram_user_id} — {self.get_infratuzilma_display()} ({self.get_viloyat_display()})"
@@ -116,6 +123,11 @@ class Maktab(models.Model):
         ordering = ['nom']
         verbose_name = 'Maktab'
         verbose_name_plural = 'Maktablar'
+        indexes = [
+            models.Index(fields=['viloyat']),
+            models.Index(fields=['tur']),
+            models.Index(fields=['holat']),
+        ]
 
     def __str__(self):
         return self.nom
@@ -253,6 +265,12 @@ class Tekshiruv(models.Model):
         ordering = ['-vaqt']
         verbose_name = 'Tekshiruv'
         verbose_name_plural = 'Tekshiruvlar'
+        indexes = [
+            models.Index(fields=['maktab', '-vaqt']),
+            models.Index(fields=['telegram_user_id']),
+            models.Index(fields=['natija']),
+            models.Index(fields=['geo_valid']),
+        ]
 
     def __str__(self):
         return f"{self.maktab.nom} — {self.get_natija_display()} — {self.telegram_full_name or self.telegram_user_id}"
@@ -269,6 +287,10 @@ class Like(models.Model):
         unique_together = ('murojaat', 'telegram_user_id')
         verbose_name = 'Like'
         verbose_name_plural = 'Likelar'
+        indexes = [
+            models.Index(fields=['murojaat']),
+            models.Index(fields=['telegram_user_id']),
+        ]
 
     def __str__(self):
         return f"Like: {self.telegram_user_id} → Murojaat #{self.murojaat_id}"
@@ -285,6 +307,10 @@ class Comment(models.Model):
         ordering = ['-vaqt']
         verbose_name = 'Izoh'
         verbose_name_plural = 'Izohlar'
+        indexes = [
+            models.Index(fields=['murojaat', '-vaqt']),
+            models.Index(fields=['telegram_user_id']),
+        ]
 
     def __str__(self):
         return f"{self.telegram_full_name}: {self.matn[:50]}"
