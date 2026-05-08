@@ -50,16 +50,6 @@ async def start_handler(message: Message):
                 web_app=WebAppInfo(url=webapp_url)
             )
         ],
-        [
-            InlineKeyboardButton(
-                text="🗺 Xarita",
-                web_app=WebAppInfo(url=f"{APP_URL}/tma/tahlil/")
-            ),
-            InlineKeyboardButton(
-                text="📢 Signal",
-                web_app=WebAppInfo(url=f"{APP_URL}/tma/murojaat/")
-            )
-        ],
     ])
 
     user_name = message.from_user.first_name or "foydalanuvchi"
