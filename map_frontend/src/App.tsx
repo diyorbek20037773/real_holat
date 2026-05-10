@@ -1,11 +1,16 @@
-import UzbekistanMap from './components/UzbekistanMap';
+import { ThemeProvider } from './context/ThemeContext';
+import { LanguageProvider } from './context/LanguageContext';
+import Dashboard from './components/Dashboard';
 
 function App() {
   return (
-    <div className="w-screen h-screen">
-      <UzbekistanMap />
-    </div>
+    <ThemeProvider>
+      <LanguageProvider>
+        <Dashboard />
+      </LanguageProvider>
+    </ThemeProvider>
   );
 }
 
 export default App;
+
